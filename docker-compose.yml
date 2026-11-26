@@ -14,6 +14,9 @@ services:
 
   api:
     image: intelloop/atlas-cmms-backend
+    build:
+      context: ./api
+      dockerfile: Dockerfile
     container_name: atlas-cmms-backend
     depends_on:
       - postgres
@@ -94,6 +97,9 @@ services:
 
   frontend:
     image: intelloop/atlas-cmms-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: atlas-cmms-frontend
     environment:
       API_URL: /api
