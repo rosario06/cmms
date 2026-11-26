@@ -1951,7 +1951,53 @@ const locale = {
   edit_reading: 'Edit reading',
   are_you_sure_delete_reading: 'Are you sure to delete this reading?',
   no_custom_fields_found: 'No custom fields found',
-  conflict_retry: 'The resource was modified by another request. Please retry in 5 seconds.'
+  conflict_retry: 'The resource was modified by another request. Please retry in 5 seconds.',
+  integrations_center: 'Integrations Center',
+  integrations_center_description:
+    'Connect Atlas CMMS with external systems and services.',
+  integration_iot_title: 'IoT Sensors & Telemetry',
+  integration_iot_description:
+    'Receive sensor readings and trigger meters and work orders automatically.',
+  integration_maps_title: 'Maps, Routes & Geolocation',
+  integration_maps_description:
+    'Geolocate assets and plan technician routes.',
+  integration_payments_title: 'Payment Gateway & Fees',
+  integration_payments_description:
+    'Collect payments and manage commissions.',
+  integration_whatsapp_title: 'WhatsApp & Notifications',
+  integration_whatsapp_description:
+    'Send alerts and updates through messaging channels.',
+  integration_active: 'Active',
+  integration_inactive: 'Inactive',
+  integration_coming_soon: 'Coming soon',
+  integration_configure: 'Configure',
+  iot_enable: 'Enable IoT ingestion',
+  iot_ingest_url: 'Ingestion URL',
+  iot_generate_token: 'Generate / Rotate token',
+  iot_rotate_confirm:
+    'Rotating the token will invalidate the current one. Devices using it will stop working. Continue?',
+  iot_token_shown_once:
+    'Copy this token now. For security reasons it will not be shown again.',
+  iot_new_token: 'New token',
+  iot_token_saved: 'Token generated',
+  iot_no_token: 'No token generated yet',
+  iot_alert_url: 'Alert URL (optional)',
+  iot_alert_url_helper: 'A POST request will be sent to this URL on alerts',
+  iot_payload_example: 'Payload example',
+  iot_recent_readings: 'Latest readings',
+  iot_refresh: 'Refresh',
+  iot_no_readings: 'No readings received yet',
+  iot_config_saved: 'Configuration saved',
+  iot_admin_only: 'Only administrators can modify this configuration',
+  iot_asset_code: 'Asset code',
+  iot_metric: 'Metric',
+  iot_message: 'Message',
+  iot_reading_date: 'Reading date',
+  iot_status_PROCESSED: 'Processed',
+  iot_status_TRIGGERED: 'Triggered',
+  iot_status_ASSET_NOT_FOUND: 'Asset not found',
+  iot_status_METER_NOT_FOUND: 'Meter not found',
+  iot_status_REJECTED: 'Rejected'
 };
 
 export default locale;

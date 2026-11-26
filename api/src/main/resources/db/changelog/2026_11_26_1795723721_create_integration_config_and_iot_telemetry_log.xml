@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="1795723721-1" author="Atlas">
+        <comment>Create integration_config and iot_telemetry_log tables</comment>
+
+        <createTable tableName="integration_config">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="company_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="iot_enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="iot_token_hash" type="VARCHAR(255)"/>
+            <column name="iot_token_last4" type="VARCHAR(8)"/>
+            <column name="webhook_alert_url" type="VARCHAR(2048)"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="integration_config" baseColumnNames="company_id"
+                                 constraintName="fk_integration_config_company"
+                                 referencedTableName="company" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <addUniqueConstraint tableName="integration_config" columnNames="company_id"
+                             constraintName="uq_integration_config_company"/>
+
+        <createIndex tableName="integration_config" indexName="idx_integration_config_iot_token_hash">
+            <column name="iot_token_hash"/>
+        </createIndex>
+
+        <createSequence sequenceName="integration_config_seq" startValue="1" incrementBy="50"/>
+
+        <createTable tableName="iot_telemetry_log">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="company_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asset_code" type="VARCHAR(255)"/>
+            <column name="metric_name" type="VARCHAR(255)"/>
+            <column name="value" type="DOUBLE PRECISION"/>
+            <column name="reading_timestamp" type="TIMESTAMP"/>
+            <column name="status" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="message" type="VARCHAR(1000)"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="iot_telemetry_log" baseColumnNames="company_id"
+                                 constraintName="fk_iot_telemetry_log_company"
+                                 referencedTableName="company" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+
+        <createIndex tableName="iot_telemetry_log" indexName="idx_iot_telemetry_log_company_created">
+            <column name="company_id"/>
+            <column name="created_at"/>
+        </createIndex>
+
+        <createSequence sequenceName="iot_telemetry_log_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+</databaseChangeLog>

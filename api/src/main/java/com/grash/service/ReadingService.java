@@ -7,6 +7,7 @@ import com.grash.dto.workOrder.WorkOrderPostDTO;
 import com.grash.exception.CustomException;
 import com.grash.mapper.ReadingMapper;
 import com.grash.mapper.WorkOrderMapper;
+import com.grash.model.Company;
 import com.grash.model.Meter;
 import com.grash.model.Notification;
 import com.grash.model.Reading;
@@ -32,6 +33,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -148,9 +150,35 @@ public class ReadingService {
         return readingRepository.findFirstByMeter_IdOrderByCreatedAtDesc(id);
     }
 
+    /**
+     * Creates a reading coming from an automated source (IoT telemetry) where there is no authenticated user.
+     * Reuses the same trigger evaluation as manual readings. The per-meter update frequency is intentionally not
+     * enforced since telemetry is expected to arrive more often than manual readings.
+     *
+     * @return the number of meter triggers that fired (and created a work order)
+     */
+    @Transactional
+    public int createFromTelemetry(Long meterId, double value) {
+        Meter meter = meterService.findById(meterId)
+                .orElseThrow(() -> new CustomException("Meter not found", HttpStatus.NOT_FOUND));
+        Company company = meter.getCompany();
+        if (!company.getSubscription().getSubscriptionPlan().getFeatures().contains(PlanFeatures.METER))
+            throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
+        int fired = processMeterTriggers(meter, value, company, Helper.getLocale(company));
+        Reading reading = new Reading();
+        reading.setMeter(meter);
+        reading.setValue(value);
+        readingRepository.save(reading);
+        return fired;
+    }
+
     private void processMeterTriggers(Meter meter, double readingValue, User user) {
+        processMeterTriggers(meter, readingValue, user.getCompany(), Helper.getLocale(user));
+    }
+
+    private int processMeterTriggers(Meter meter, double readingValue, Company company, Locale locale) {
         Collection<WorkOrderMeterTrigger> meterTriggers = workOrderMeterTriggerService.findByMeter(meter.getId());
-        Locale locale = Helper.getLocale(user);
+        AtomicInteger firedCount = new AtomicInteger();
         meterTriggers.forEach(meterTrigger -> {
             boolean error = false;
             StringBuilder message = new StringBuilder();
@@ -168,11 +196,12 @@ public class ReadingService {
                         locale));
             }
             if (error) {
+                firedCount.incrementAndGet();
                 notificationService.createMultiple(meter.getUsers().stream().map(user1 ->
                         new Notification(message.toString(), user1, NotificationType.METER, meter.getId())
                 ).collect(Collectors.toList()), true, title);
                 WorkOrderPostDTO workOrder = workOrderService.getWorkOrderFromWorkOrderBase(meterTrigger);
-                WorkOrder createdWorkOrder = workOrderService.create(workOrder, user.getCompany());
+                WorkOrder createdWorkOrder = workOrderService.create(workOrder, company);
 
                 Map<String, Object> webhookPayload = new HashMap<>();
                 webhookPayload.put("meterId", meter.getId());
@@ -184,11 +213,12 @@ public class ReadingService {
                 webhookPayload.put("triggerCondition", meterTrigger.getTriggerCondition().name());
                 webhookPayload.put("workOrderId", createdWorkOrder.getId());
                 Object serializedWorkOrder = workOrderMapper.toShowDto(createdWorkOrder);
-                webhookDispatchService.dispatchWebhook(user.getCompany(),
+                webhookDispatchService.dispatchWebhook(company,
                         WebhookEvent.METER_TRIGGER_STATUS_CHANGE, webhookPayload,
                         "triggeredWorkOrder", serializedWorkOrder, null, null, null, null, null);
             }
         });
+        return firedCount.get();
     }
 
     public List<ReadingHistogramDTO> getHistogramData(Long meterId, Date start, Date end, @NotNull String timeZone) {
