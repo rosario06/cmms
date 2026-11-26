@@ -69,10 +69,7 @@ export const getWebhookDeliveryLogs =
 export const retryWebhookDeliveryLog =
   (logId: number): AppThunk =>
   async () => {
-    return await api.post<WebhookDeliveryLog>(
-      `${basePath}/logs/${logId}/retry`,
-      {}
-    );
+    return api.post<WebhookDeliveryLog>(`${basePath}/logs/${logId}/retry`, {});
   };
 
 export default slice;
