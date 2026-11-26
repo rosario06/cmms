@@ -48,7 +48,7 @@ const slice = createSlice({
 
 export const reducer = slice.reducer;
 
-export const clearWebhookDeliveryLogs = (): AppThunk => (dispatch) => {
+export const clearWebhookDeliveryLogs = (): AppThunk => async (dispatch) => {
   dispatch(slice.actions.clearLogs());
 };
 
