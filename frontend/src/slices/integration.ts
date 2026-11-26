@@ -2,10 +2,18 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import type { AppThunk } from 'src/store';
 import {
+  Integrations,
+  IntegrationTestResult,
   IotConfigPatchDTO,
   IotIntegration,
   IotTelemetry,
-  IotTokenResponse
+  IotTokenResponse,
+  MapsConfigPatchDTO,
+  MapsIntegration,
+  NotificationsConfigPatchDTO,
+  NotificationsIntegration,
+  PaymentsConfigPatchDTO,
+  PaymentsIntegration
 } from '../models/owns/integration';
 import api from '../utils/api';
 import { revertAll } from 'src/utils/redux';
@@ -14,6 +22,9 @@ const basePath = 'integrations';
 
 interface IntegrationState {
   iot: IotIntegration | null;
+  maps: MapsIntegration | null;
+  payments: PaymentsIntegration | null;
+  notifications: NotificationsIntegration | null;
   telemetry: IotTelemetry[];
   loadingGet: boolean;
   loadingTelemetry: boolean;
@@ -21,6 +32,9 @@ interface IntegrationState {
 
 const initialState: IntegrationState = {
   iot: null,
+  maps: null,
+  payments: null,
+  notifications: null,
   telemetry: [],
   loadingGet: false,
   loadingTelemetry: false
@@ -42,6 +56,35 @@ const slice = createSlice({
       action: PayloadAction<{ iot: IotIntegration }>
     ) {
       state.iot = action.payload.iot;
+    },
+    getIntegrations(
+      state: IntegrationState,
+      action: PayloadAction<{ integrations: Integrations }>
+    ) {
+      const { iot, maps, payments, notifications } =
+        action.payload.integrations;
+      state.iot = iot;
+      state.maps = maps ?? null;
+      state.payments = payments ?? null;
+      state.notifications = notifications ?? null;
+    },
+    setMaps(
+      state: IntegrationState,
+      action: PayloadAction<{ maps: MapsIntegration }>
+    ) {
+      state.maps = action.payload.maps;
+    },
+    setPayments(
+      state: IntegrationState,
+      action: PayloadAction<{ payments: PaymentsIntegration }>
+    ) {
+      state.payments = action.payload.payments;
+    },
+    setNotifications(
+      state: IntegrationState,
+      action: PayloadAction<{ notifications: NotificationsIntegration }>
+    ) {
+      state.notifications = action.payload.notifications;
     },
     setIotToken(
       state: IntegrationState,
@@ -81,8 +124,8 @@ export const reducer = slice.reducer;
 export const getIntegrations = (): AppThunk => async (dispatch) => {
   dispatch(slice.actions.setLoadingGet({ loading: true }));
   try {
-    const integrations = await api.get<{ iot: IotIntegration }>(basePath);
-    dispatch(slice.actions.getIotIntegration({ iot: integrations.iot }));
+    const integrations = await api.get<Integrations>(basePath);
+    dispatch(slice.actions.getIntegrations({ integrations }));
   } catch {
   } finally {
     dispatch(slice.actions.setLoadingGet({ loading: false }));
@@ -94,6 +137,52 @@ export const editIotIntegration =
   async (dispatch) => {
     const iot = await api.patch<IotIntegration>(`${basePath}/iot`, body);
     dispatch(slice.actions.editIotIntegration({ iot }));
+  };
+
+export const editMapsIntegration =
+  (body: MapsConfigPatchDTO): AppThunk =>
+  async (dispatch) => {
+    const maps = await api.patch<MapsIntegration>(`${basePath}/maps`, body);
+    dispatch(slice.actions.setMaps({ maps }));
+  };
+
+export const testMapsIntegration =
+  (): AppThunk => async () => {
+    return api.post<IntegrationTestResult>(`${basePath}/maps/test`, {});
+  };
+
+export const editPaymentsIntegration =
+  (body: PaymentsConfigPatchDTO): AppThunk =>
+  async (dispatch) => {
+    const payments = await api.patch<PaymentsIntegration>(
+      `${basePath}/payments`,
+      body
+    );
+    dispatch(slice.actions.setPayments({ payments }));
+  };
+
+export const testPaymentsIntegration =
+  (): AppThunk => async () => {
+    return api.post<IntegrationTestResult>(`${basePath}/payments/test`, {});
+  };
+
+export const editNotificationsIntegration =
+  (body: NotificationsConfigPatchDTO): AppThunk =>
+  async (dispatch) => {
+    const notifications = await api.patch<NotificationsIntegration>(
+      `${basePath}/notifications`,
+      body
+    );
+    dispatch(slice.actions.setNotifications({ notifications }));
+  };
+
+export const testWhatsappNotification =
+  (phone: string): AppThunk =>
+  async () => {
+    return api.post<IntegrationTestResult>(
+      `${basePath}/notifications/test-whatsapp`,
+      { phone }
+    );
   };
 
 // Returns the token response so the caller can show the token once.

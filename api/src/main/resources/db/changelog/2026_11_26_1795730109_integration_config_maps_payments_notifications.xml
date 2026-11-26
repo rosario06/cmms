@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="1795730109-1" author="Atlas">
+        <comment>Add maps, payments and notifications settings to integration_config</comment>
+
+        <addColumn tableName="integration_config">
+            <!-- Maps -->
+            <column name="maps_enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="maps_provider" type="VARCHAR(32)"/>
+            <column name="maps_api_key_enc" type="TEXT"/>
+            <column name="maps_api_key_last4" type="VARCHAR(8)"/>
+            <column name="default_center_lat" type="DOUBLE PRECISION"/>
+            <column name="default_center_lng" type="DOUBLE PRECISION"/>
+            <column name="search_radius_km" type="DOUBLE PRECISION"/>
+
+            <!-- Payments -->
+            <column name="payments_enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_provider" type="VARCHAR(32)"/>
+            <column name="payment_environment" type="VARCHAR(32)" defaultValue="SANDBOX">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_public_key" type="VARCHAR(512)"/>
+            <column name="payment_secret_key_enc" type="TEXT"/>
+            <column name="payment_secret_key_last4" type="VARCHAR(8)"/>
+            <column name="payment_webhook_secret_enc" type="TEXT"/>
+            <column name="payment_webhook_secret_last4" type="VARCHAR(8)"/>
+            <column name="platform_commission_percent" type="DOUBLE PRECISION"/>
+
+            <!-- Notifications (WhatsApp) -->
+            <column name="whatsapp_enabled" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="whatsapp_provider" type="VARCHAR(32)"/>
+            <column name="whatsapp_phone_number_id" type="VARCHAR(255)"/>
+            <column name="whatsapp_account_sid" type="VARCHAR(255)"/>
+            <column name="whatsapp_access_token_enc" type="TEXT"/>
+            <column name="whatsapp_access_token_last4" type="VARCHAR(8)"/>
+            <column name="notify_on_work_order_created" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notify_on_technician_assigned" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notify_on_technician_arrived" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notify_on_work_order_completed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

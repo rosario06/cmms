@@ -17,25 +17,29 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useDispatch, useSelector } from '../../../../store';
 import { getIntegrations } from '../../../../slices/integration';
 import IotConfigModal from './IotConfigModal';
+import MapsConfigModal from './MapsConfigModal';
+import PaymentsConfigModal from './PaymentsConfigModal';
+import NotificationsConfigModal from './NotificationsConfigModal';
 
 interface IntegrationCard {
   key: string;
   title: string;
   description: string;
   icon: ReactElement;
-  available: boolean;
   active: boolean;
 }
 
 function IntegrationsCenter() {
   const { t }: { t: any } = useTranslation();
   const dispatch = useDispatch();
-  const { iot } = useSelector((state) => state.integrations);
-  const [openIot, setOpenIot] = useState<boolean>(false);
+  const { iot, maps, payments, notifications } = useSelector((state) => state.integrations);
+  const [openModal, setOpenModal] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(getIntegrations());
   }, []);
+
+  const closeModal = () => setOpenModal(null);
 
   const cards: IntegrationCard[] = [
     {
@@ -43,7 +47,6 @@ function IntegrationsCenter() {
       title: t('integration_iot_title'),
       description: t('integration_iot_description'),
       icon: <SensorsIcon fontSize="large" />,
-      available: true,
       active: !!iot?.enabled
     },
     {
@@ -51,24 +54,21 @@ function IntegrationsCenter() {
       title: t('integration_maps_title'),
       description: t('integration_maps_description'),
       icon: <MapIcon fontSize="large" />,
-      available: false,
-      active: false
+      active: !!maps?.enabled
     },
     {
       key: 'payments',
       title: t('integration_payments_title'),
       description: t('integration_payments_description'),
       icon: <PaymentsIcon fontSize="large" />,
-      available: false,
-      active: false
+      active: !!payments?.enabled
     },
     {
       key: 'whatsapp',
       title: t('integration_whatsapp_title'),
       description: t('integration_whatsapp_description'),
       icon: <WhatsAppIcon fontSize="large" />,
-      available: false,
-      active: false
+      active: !!notifications?.whatsappEnabled
     }
   ];
 
@@ -92,21 +92,13 @@ function IntegrationsCenter() {
                   mb={2}
                 >
                   <Box color="primary.main">{card.icon}</Box>
-                  {card.available ? (
-                    <Chip
-                      size="small"
-                      color={card.active ? 'success' : 'default'}
-                      label={t(
-                        card.active ? 'integration_active' : 'integration_inactive'
-                      )}
-                    />
-                  ) : (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={t('integration_coming_soon')}
-                    />
-                  )}
+                  <Chip
+                    size="small"
+                    color={card.active ? 'success' : 'default'}
+                    label={t(
+                      card.active ? 'integration_active' : 'integration_inactive'
+                    )}
+                  />
                 </Box>
                 <Typography variant="h5" gutterBottom>
                   {card.title}
@@ -118,10 +110,7 @@ function IntegrationsCenter() {
               <CardActions sx={{ p: 2 }}>
                 <Button
                   variant="contained"
-                  disabled={!card.available}
-                  onClick={() => {
-                    if (card.key === 'iot') setOpenIot(true);
-                  }}
+                  onClick={() => setOpenModal(card.key)}
                 >
                   {t('integration_configure')}
                 </Button>
@@ -130,7 +119,16 @@ function IntegrationsCenter() {
           </Grid>
         ))}
       </Grid>
-      <IotConfigModal open={openIot} onClose={() => setOpenIot(false)} />
+      <IotConfigModal open={openModal === 'iot'} onClose={closeModal} />
+      <MapsConfigModal open={openModal === 'maps'} onClose={closeModal} />
+      <PaymentsConfigModal
+        open={openModal === 'payments'}
+        onClose={closeModal}
+      />
+      <NotificationsConfigModal
+        open={openModal === 'whatsapp'}
+        onClose={closeModal}
+      />
     </Box>
   );
 }

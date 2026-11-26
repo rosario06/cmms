@@ -245,4 +245,6 @@
              relativeToChangelogFile="true"/>
     <include file="changelog/2026_11_26_1795723721_create_integration_config_and_iot_telemetry_log.xml"
              relativeToChangelogFile="true"/>
+    <include file="changelog/2026_11_26_1795730109_integration_config_maps_payments_notifications.xml"
+             relativeToChangelogFile="true"/>
 </databaseChangeLog>
