@@ -19,6 +19,8 @@ import java.util.Optional;
 public interface AssetRepository extends JpaRepository<Asset, Long>, JpaSpecificationExecutor<Asset> {
     List<Asset> findByCompany_Id(Long id);
 
+    Optional<Asset> findFirstByCustomIdAndCompany_Id(String customId, Long companyId);
+
     List<Asset> findByCompany_Id(Long id, Sort sort);
 
     @EntityGraph(attributePaths = {

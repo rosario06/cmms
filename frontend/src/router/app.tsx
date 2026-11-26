@@ -90,6 +90,9 @@ const RequestPortalSettings = Loader(
 const IntegrationsSettings = Loader(
   lazy(() => import('../content/own/Settings/Integrations'))
 );
+const IntegrationsCenter = Loader(
+  lazy(() => import('../content/own/Settings/Integrations/IntegrationsCenter'))
+);
 const ApiKeysPage = Loader(
   lazy(() => import('../content/own/Settings/Integrations/ApiKeysPage'))
 );
@@ -252,7 +255,8 @@ const appRoutes = [
         path: 'integrations',
         element: <IntegrationsSettings />,
         children: [
-          { index: true, element: <Navigate to="api-keys" replace /> },
+          { index: true, element: <Navigate to="center" replace /> },
+          { path: 'center', element: <IntegrationsCenter /> },
           { path: 'connectors', element: <Connectors /> },
           { path: 'api-keys', element: <ApiKeysPage /> },
           { path: 'webhooks', element: <WebhooksPage /> }

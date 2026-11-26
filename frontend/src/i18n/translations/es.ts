@@ -2076,7 +2076,52 @@ const esJSON = {
   trigger_work_order: 'Activar orden de trabajo',
   edit_reading: 'Editar lectura',
   are_you_sure_delete_reading: '¿Está seguro de que desea eliminar esta lectura?',
-  no_custom_fields_found: 'No se encontraron campos personalizados'
+  no_custom_fields_found: 'No se encontraron campos personalizados',
+  integrations_center: 'Centro de integraciones',
+  integrations_center_description:
+    'Conecte Atlas CMMS con sistemas y servicios externos.',
+  integration_iot_title: 'Sensores IoT y Telemetría',
+  integration_iot_description:
+    'Reciba lecturas de sensores y active medidores y órdenes de trabajo automáticamente.',
+  integration_maps_title: 'Mapas, Rutas y Geolocalización',
+  integration_maps_description:
+    'Geolocalice activos y planifique rutas de técnicos.',
+  integration_payments_title: 'Pasarela de Pagos y Comisiones',
+  integration_payments_description: 'Cobre pagos y gestione comisiones.',
+  integration_whatsapp_title: 'WhatsApp y Notificaciones',
+  integration_whatsapp_description:
+    'Envíe alertas y novedades por canales de mensajería.',
+  integration_active: 'Activo',
+  integration_inactive: 'Inactivo',
+  integration_coming_soon: 'Próximamente',
+  integration_configure: 'Configurar',
+  iot_enable: 'Habilitar ingesta IoT',
+  iot_ingest_url: 'URL de ingesta',
+  iot_generate_token: 'Generar / Rotar token',
+  iot_rotate_confirm:
+    'Al rotar el token se invalidará el actual. Los dispositivos que lo usan dejarán de funcionar. ¿Continuar?',
+  iot_token_shown_once:
+    'Copie este token ahora. Por seguridad no se volverá a mostrar.',
+  iot_new_token: 'Nuevo token',
+  iot_token_saved: 'Token generado',
+  iot_no_token: 'Aún no se ha generado un token',
+  iot_alert_url: 'URL de alerta (opcional)',
+  iot_alert_url_helper: 'Se enviará una petición POST a esta URL en las alertas',
+  iot_payload_example: 'Ejemplo de payload',
+  iot_recent_readings: 'Últimas lecturas',
+  iot_refresh: 'Refrescar',
+  iot_no_readings: 'Aún no se han recibido lecturas',
+  iot_config_saved: 'Configuración guardada',
+  iot_admin_only: 'Solo los administradores pueden modificar esta configuración',
+  iot_asset_code: 'Código del activo',
+  iot_metric: 'Métrica',
+  iot_message: 'Mensaje',
+  iot_reading_date: 'Fecha de lectura',
+  iot_status_PROCESSED: 'Procesada',
+  iot_status_TRIGGERED: 'Disparada',
+  iot_status_ASSET_NOT_FOUND: 'Activo no encontrado',
+  iot_status_METER_NOT_FOUND: 'Medidor no encontrado',
+  iot_status_REJECTED: 'Rechazada'
 };
 
 export default esJSON;
