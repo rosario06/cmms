@@ -160,7 +160,7 @@ storage:
 integrations:
   encryption-key: ${INTEGRATIONS_ENCRYPTION_KEY:}
 
-allowed-organization-admins:${ALLOWED_ORGANIZATION_ADMINS:}
+allowed-organization-admins: ${ALLOWED_ORGANIZATION_ADMINS:}
 cloud-version: ${CLOUD_VERSION:false}
 enable-sso: ${ENABLE_SSO:false}
 oauth2:
