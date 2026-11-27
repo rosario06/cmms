@@ -2174,7 +2174,41 @@ const esJSON = {
   planner_legend: 'Prioridad:',
   planner_technician_overlap: 'Aviso: el técnico tiene órdenes de trabajo solapadas en este horario',
   planner_schedule_failed: 'No se pudo programar la orden de trabajo',
-  planner_load_failed: 'No se pudo cargar el planificador'
+  planner_load_failed: 'No se pudo cargar el planificador',
+  qr_label: 'Etiqueta QR',
+  download_png: 'Descargar PNG',
+  on_site: 'En sitio',
+  check_in_out_qr: 'Check-in / Check-out QR',
+  check_in: 'Check-in',
+  check_out: 'Check-out',
+  check_in_success: 'Check-in registrado',
+  check_out_success: 'Check-out registrado',
+  check_in_time: 'Entrada',
+  check_out_time: 'Salida',
+  total_minutes: 'Minutos totales',
+  scan_with_camera: 'Escanear con cámara',
+  enter_code: 'Escribir código',
+  qr_code_value: 'Contenido del código QR',
+  camera_not_supported:
+    'Este navegador no puede escanear códigos QR. Escribe el código manualmente.',
+  camera_permission_denied:
+    'No se pudo acceder a la cámara. Revisa los permisos del navegador o escribe el código manualmente.',
+  attendance_will_check_in:
+    'Escanea el código QR de esta orden de trabajo o de su activo para registrar la entrada.',
+  attendance_will_check_out:
+    'Estás en sitio. Escanea el código QR para registrar la salida.',
+  attendance_no_location:
+    'Ubicación no disponible: el registro se guardó sin coordenadas.',
+  attendance_conflict:
+    'El registro de asistencia entra en conflicto con uno existente (por ejemplo, ya tienes una entrada activa).',
+  attendance_error: 'No se pudo registrar la asistencia',
+  attendance_getting_location: 'Obteniendo ubicación...',
+  attendance_processing: 'Procesando...',
+  attendance_scan_again: 'Escanear de nuevo',
+  attendance: 'Asistencia',
+  attendance_empty: 'No hay registros de asistencia',
+  attendance_technician: 'Técnico',
+  attendance_coordinates: 'Coordenadas (entrada / salida)'
 };
 
 export default esJSON;

@@ -18,12 +18,15 @@ import { Customer } from '../../../../models/owns/customer';
 import { Vendor } from '../../../../models/owns/vendor';
 import Team, { TeamMiniDTO } from '../../../../models/owns/team';
 import {
+  getAssetUrl,
   getCustomerUrl,
   getTeamUrl,
   getUserUrl,
   getVendorUrl
 } from '../../../../utils/urlPaths';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
+import QrCodeIcon from '@mui/icons-material/QrCode';
+import QrLabelModal from '../../components/QrLabelModal';
 import { useDispatch } from '../../../../store';
 import { editAsset } from '../../../../slices/asset';
 import { CompanySettingsContext } from '../../../../contexts/CompanySettingsContext';
@@ -76,7 +79,9 @@ const downloadQRCode = (value: string) => {
 const AssetDetails = ({ asset, loading, onCopy }: PropsType) => {
   const { t }: { t: any } = useTranslation();
   const theme = useTheme();
-  const { hasCreatePermission, hasEditPermission } = useAuth();
+  const { hasCreatePermission, hasEditPermission, hasViewPermission } =
+    useAuth();
+  const [openQrLabel, setOpenQrLabel] = useState<boolean>(false);
   const navigate = useNavigate();
   const { getFormattedDate, getFormattedCurrency } = useContext(
     CompanySettingsContext
@@ -203,6 +208,15 @@ const AssetDetails = ({ asset, loading, onCopy }: PropsType) => {
     );
   return (
     <Box sx={{ px: 4 }}>
+      {asset && (
+        <QrLabelModal
+          open={openQrLabel}
+          onClose={() => setOpenQrLabel(false)}
+          title={asset.name}
+          value={`${window.location.origin}${getAssetUrl(asset.id)}`}
+          fileName={`asset-${asset.id}-qr`}
+        />
+      )}
       <Grid container spacing={2}>
         <Grid item xs={12}>
           <Card sx={{ p: 2 }}>
@@ -233,6 +247,15 @@ const AssetDetails = ({ asset, loading, onCopy }: PropsType) => {
                       <IconButton onClick={onCopy}>
                         <ContentCopyIcon />
                       </IconButton>
+                    )}
+                    {asset && hasViewPermission(PermissionEntity.ASSETS) && (
+                      <Button
+                        variant="outlined"
+                        startIcon={<QrCodeIcon />}
+                        onClick={() => setOpenQrLabel(true)}
+                      >
+                        {t('qr_label')}
+                      </Button>
                     )}
                   </Stack>
                   {hasCreatePermission(PermissionEntity.WORK_ORDERS) && (

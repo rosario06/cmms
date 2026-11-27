@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   debounce,
   Divider,
@@ -97,6 +98,12 @@ import CloseIcon from '@mui/icons-material/Close';
 import CheckTwoToneIcon from '@mui/icons-material/CheckTwoTone';
 import EmailTwoToneIcon from '@mui/icons-material/EmailTwoTone';
 import { ContentCopyTwoTone } from '@mui/icons-material';
+import QrCodeIcon from '@mui/icons-material/QrCode';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
+import QrLabelModal from '../../components/QrLabelModal';
+import ScanAttendanceModal from './ScanAttendanceModal';
+import AttendanceSection from './AttendanceSection';
+import { getActiveAttendance } from '../../../../slices/attendance';
 
 const LabelWrapper = styled(Box)(
   ({ theme }) => `
@@ -125,8 +132,19 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
   const { getFormattedDate, getUserNameById, getFormattedCurrency } =
     useContext(CompanySettingsContext);
   const { t }: { t: any } = useTranslation();
-  const { user, hasEditPermission, hasDeletePermission, hasCreatePermission } =
-    useAuth();
+  const {
+    user,
+    hasEditPermission,
+    hasDeletePermission,
+    hasCreatePermission,
+    hasViewPermission
+  } = useAuth();
+  const [openQrLabel, setOpenQrLabel] = useState<boolean>(false);
+  const [openScanAttendance, setOpenScanAttendance] = useState<boolean>(false);
+  const [attendanceRefresh, setAttendanceRefresh] = useState<number>(0);
+  const [onSiteSeconds, setOnSiteSeconds] = useState<number>(0);
+  const { activeByWorkOrder } = useSelector((state) => state.attendance);
+  const activeAttendance = activeByWorkOrder[workOrder.id] ?? null;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const commentIdParam = searchParams.get('commentId');
@@ -182,6 +200,31 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
   useEffect(() => {
     dispatch(getCommentsCountByWorkOrder(workOrder.id));
   }, [workOrder.id, dispatch]);
+
+  useEffect(() => {
+    dispatch(getActiveAttendance(workOrder.id));
+  }, [workOrder.id, dispatch]);
+
+  const activeCheckInTime = activeAttendance?.checkInTime;
+  useEffect(() => {
+    if (!activeCheckInTime) {
+      setOnSiteSeconds(0);
+      return undefined;
+    }
+    const start = new Date(activeCheckInTime).getTime();
+    const tick = () =>
+      setOnSiteSeconds(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [activeCheckInTime]);
+
+  const formatOnSite = (totalSeconds: number): string => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${pad(hours)}:${pad(minutes)}:${pad(totalSeconds % 60)}`;
+  };
 
   useEffect(() => {
     if (commentIdParam) {
@@ -681,7 +724,40 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
                     </Select>
                   )}
                 </Box>
-                <Box>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                    alignItems: 'center',
+                    justifyContent: 'flex-end'
+                  }}
+                >
+                  {activeAttendance && (
+                    <Chip
+                      color="success"
+                      label={`${t('on_site')} · ${formatOnSite(onSiteSeconds)}`}
+                    />
+                  )}
+                  {hasViewPermission(PermissionEntity.WORK_ORDERS) && (
+                    <Button
+                      variant="outlined"
+                      startIcon={<QrCodeIcon />}
+                      onClick={() => setOpenQrLabel(true)}
+                    >
+                      {t('qr_label')}
+                    </Button>
+                  )}
+                  {hasEditPermission(PermissionEntity.WORK_ORDERS, workOrder) &&
+                    (workOrder.status !== 'COMPLETE' || !!activeAttendance) && (
+                      <Button
+                        variant="outlined"
+                        startIcon={<QrCodeScannerIcon />}
+                        onClick={() => setOpenScanAttendance(true)}
+                      >
+                        {t('check_in_out_qr')}
+                      </Button>
+                    )}
                   <Button
                     startIcon={
                       controllingTime ? (
@@ -849,6 +925,14 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
                     </Grid>
                   )}
                 </>
+              )}
+              {hasViewPermission(PermissionEntity.WORK_ORDERS) && (
+                <Grid item xs={12}>
+                  <AttendanceSection
+                    workOrderId={workOrder.id}
+                    refreshKey={attendanceRefresh}
+                  />
+                </Grid>
               )}
               {workOrder.parentRequest && (
                 <Grid item xs={12} lg={6}>
@@ -1199,6 +1283,20 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
         open={openLinkModal}
         onClose={() => setOpenLinkModal(false)}
         workOrderId={workOrder.id}
+      />
+      <QrLabelModal
+        open={openQrLabel}
+        onClose={() => setOpenQrLabel(false)}
+        title={workOrder.title}
+        value={`${window.location.origin}${getWorkOrderUrl(workOrder.id)}`}
+        fileName={`work-order-${workOrder.id}-qr`}
+      />
+      <ScanAttendanceModal
+        open={openScanAttendance}
+        onClose={() => setOpenScanAttendance(false)}
+        workOrderId={workOrder.id}
+        activeLog={activeAttendance}
+        onDone={() => setAttendanceRefresh((value) => value + 1)}
       />
       {isImageViewerOpen && (
         <div style={{ zIndex: 100 }}>

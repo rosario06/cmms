@@ -2050,7 +2050,41 @@ const locale = {
   planner_legend: 'Priority:',
   planner_technician_overlap: 'Warning: the technician has overlapping work orders in this time slot',
   planner_schedule_failed: 'The work order could not be scheduled',
-  planner_load_failed: 'The planner could not be loaded'
+  planner_load_failed: 'The planner could not be loaded',
+  qr_label: 'QR label',
+  download_png: 'Download PNG',
+  on_site: 'On site',
+  check_in_out_qr: 'Check-in / Check-out QR',
+  check_in: 'Check-in',
+  check_out: 'Check-out',
+  check_in_success: 'Check-in recorded',
+  check_out_success: 'Check-out recorded',
+  check_in_time: 'Check-in',
+  check_out_time: 'Check-out',
+  total_minutes: 'Total minutes',
+  scan_with_camera: 'Scan with camera',
+  enter_code: 'Enter code',
+  qr_code_value: 'QR code content',
+  camera_not_supported:
+    'This browser cannot scan QR codes. Enter the code manually.',
+  camera_permission_denied:
+    'The camera could not be accessed. Check the browser permissions or enter the code manually.',
+  attendance_will_check_in:
+    'Scan the QR code of this work order or asset to check in.',
+  attendance_will_check_out:
+    'You are on site. Scan the QR code to check out.',
+  attendance_no_location:
+    'Location not available: the record was saved without coordinates.',
+  attendance_conflict:
+    'The attendance record conflicts with an existing one (for example, you already have an active check-in).',
+  attendance_error: 'The attendance could not be recorded',
+  attendance_getting_location: 'Getting location...',
+  attendance_processing: 'Processing...',
+  attendance_scan_again: 'Scan again',
+  attendance: 'Attendance',
+  attendance_empty: 'No attendance records',
+  attendance_technician: 'Technician',
+  attendance_coordinates: 'Coordinates (in / out)'
 };
 
 export default locale;
