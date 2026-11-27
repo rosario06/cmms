@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="service_contract-create" author="Atlas">
+        <createTable tableName="service_contract">
+            <column name="id" type="BIGINT"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="company_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="contract_number" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="name" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="customer_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="billing_cycle" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="start_date" type="TIMESTAMP"/>
+            <column name="end_date" type="TIMESTAMP"/>
+            <column name="monthly_fee" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="included_hours" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="remaining_hours" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="retainer_balance" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="hourly_rate_override" type="DOUBLE PRECISION"/>
+            <column name="parts_markup_percent" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="auto_invoice" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="last_invoiced_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="service_contract" baseColumnNames="company_id" constraintName="fk_service_contract_company_id" referencedTableName="company" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="service_contract" baseColumnNames="customer_id" constraintName="fk_service_contract_customer_id" referencedTableName="customer" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="service_contract" indexName="idx_service_contract_company_status"><column name="company_id"/><column name="status"/></createIndex>
+        <createSequence sequenceName="service_contract_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+    <changeSet id="sla_policy-create" author="Atlas">
+        <createTable tableName="sla_policy">
+            <column name="id" type="BIGINT"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="company_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="name" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="priority" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="first_response_minutes" type="INTEGER" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="resolution_minutes" type="INTEGER" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="penalty_percent" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="service_contract_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="sla_policy" baseColumnNames="company_id" constraintName="fk_sla_policy_company_id" referencedTableName="company" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="sla_policy" baseColumnNames="service_contract_id" constraintName="fk_sla_policy_service_contract_id" referencedTableName="service_contract" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createSequence sequenceName="sla_policy_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+    <changeSet id="cost_center-create" author="Atlas">
+        <createTable tableName="cost_center">
+            <column name="id" type="BIGINT"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="company_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="code" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="name" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="customer_id" type="BIGINT"/>
+            <column name="location_id" type="BIGINT"/>
+            <column name="fiscal_period" type="VARCHAR(255)"/>
+            <column name="allocated_budget" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="spent_amount" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="alert_threshold_percent" type="DOUBLE PRECISION" defaultValueNumeric="80"><constraints nullable="false"/></column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true"><constraints nullable="false"/></column>
+            <column name="alert_sent" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="cost_center" baseColumnNames="company_id" constraintName="fk_cost_center_company_id" referencedTableName="company" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="cost_center" baseColumnNames="customer_id" constraintName="fk_cost_center_customer_id" referencedTableName="customer" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="cost_center" baseColumnNames="location_id" constraintName="fk_cost_center_location_id" referencedTableName="location" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createSequence sequenceName="cost_center_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+    <changeSet id="customer_invoice-create" author="Atlas">
+        <createTable tableName="customer_invoice">
+            <column name="id" type="BIGINT"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="company_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="invoice_number" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="customer_id" type="BIGINT"/>
+            <column name="work_order_id" type="BIGINT"/>
+            <column name="service_contract_id" type="BIGINT"/>
+            <column name="issue_date" type="TIMESTAMP"/>
+            <column name="due_date" type="TIMESTAMP"/>
+            <column name="status" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="currency" type="VARCHAR(10)"/>
+            <column name="subtotal" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="tax_rate_percent" type="DOUBLE PRECISION" defaultValueNumeric="18"><constraints nullable="false"/></column>
+            <column name="tax_amount" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="total_amount" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="paid_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="customer_invoice" baseColumnNames="company_id" constraintName="fk_customer_invoice_company_id" referencedTableName="company" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="customer_invoice" baseColumnNames="customer_id" constraintName="fk_customer_invoice_customer_id" referencedTableName="customer" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="customer_invoice" baseColumnNames="work_order_id" constraintName="fk_customer_invoice_work_order_id" referencedTableName="work_order" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="customer_invoice" baseColumnNames="service_contract_id" constraintName="fk_customer_invoice_service_contract_id" referencedTableName="service_contract" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="customer_invoice" indexName="idx_customer_invoice_company_status"><column name="company_id"/><column name="status"/></createIndex>
+        <addUniqueConstraint tableName="customer_invoice" columnNames="company_id, invoice_number" constraintName="uq_customer_invoice_number"/>
+        <createSequence sequenceName="customer_invoice_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+    <changeSet id="customer_invoice_line-create" author="Atlas">
+        <createTable tableName="customer_invoice_line">
+            <column name="id" type="BIGINT"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="company_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="invoice_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="description" type="VARCHAR(1000)"/>
+            <column name="item_type" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="quantity" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="unit_price" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="line_total" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="updated_at" type="TIMESTAMP"><constraints nullable="false"/></column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="customer_invoice_line" baseColumnNames="company_id" constraintName="fk_customer_invoice_line_company_id" referencedTableName="company" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="customer_invoice_line" baseColumnNames="invoice_id" constraintName="fk_customer_invoice_line_invoice_id" referencedTableName="customer_invoice" referencedColumnNames="id" onDelete="CASCADE"/>
+        <createSequence sequenceName="customer_invoice_line_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+    <changeSet id="work-order-contract-sla-finance-columns" author="Atlas">
+        <addColumn tableName="work_order">
+            <column name="service_contract_id" type="BIGINT"/>
+            <column name="sla_policy_id" type="BIGINT"/>
+            <column name="sla_first_response_due_at" type="TIMESTAMP"/>
+            <column name="sla_resolution_due_at" type="TIMESTAMP"/>
+            <column name="first_responded_at" type="TIMESTAMP"/>
+            <column name="sla_status" type="VARCHAR(20)"/>
+            <column name="cost_center_id" type="BIGINT"/>
+            <column name="total_internal_cost" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="total_billable_amount" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="net_margin_amount" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="margin_percentage" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="contract_covered_hours" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="contract_hours_applied" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="work_order" baseColumnNames="service_contract_id" constraintName="fk_work_order_service_contract_id" referencedTableName="service_contract" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="work_order" baseColumnNames="sla_policy_id" constraintName="fk_work_order_sla_policy_id" referencedTableName="sla_policy" referencedColumnNames="id" onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="work_order" baseColumnNames="cost_center_id" constraintName="fk_work_order_cost_center_id" referencedTableName="cost_center" referencedColumnNames="id" onDelete="SET NULL"/>
+        <createIndex tableName="work_order" indexName="idx_work_order_sla_status"><column name="sla_status"/></createIndex>
+        <addColumn tableName="own_user">
+            <column name="internal_hourly_cost" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="billable_hourly_rate" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </addColumn>
+        <addColumn tableName="part">
+            <column name="billable_price" type="DOUBLE PRECISION" defaultValueNumeric="0"><constraints nullable="false"/></column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

@@ -37,6 +37,12 @@ public class User extends CompanyAudit {
     @Schema(description = "User hourly rate")
     private long rate;
 
+    @Schema(description = "Internal hourly cost of the user (what the work costs the company)")
+    private double internalHourlyCost;
+
+    @Schema(description = "Hourly rate billed to customers for this user's work")
+    private double billableHourlyRate;
+
     @OneToOne(fetch = FetchType.LAZY)
     private File image;
 

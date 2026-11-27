@@ -36,6 +36,9 @@ public class Part extends CompanyAudit {
     @Schema(description = "The cost of the part")
     private double cost;
 
+    @Schema(description = "Sale price charged to the customer")
+    private double billablePrice;
+
     @Schema(description = "Indicates whether this is a demo part")
     private boolean isDemo;
 

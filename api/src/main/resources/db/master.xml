@@ -249,4 +249,6 @@
              relativeToChangelogFile="true"/>
     <include file="changelog/2026_11_27_1795796449_create_work_order_attendance_log.xml"
              relativeToChangelogFile="true"/>
+    <include file="changelog/2026_11_27_1795800000_contracts_sla_costs_invoices.xml"
+             relativeToChangelogFile="true"/>
 </databaseChangeLog>
