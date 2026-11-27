@@ -2039,7 +2039,18 @@ const locale = {
   whatsapp_test_phone: 'Test phone number',
   whatsapp_phone_helper: 'Format: +18095551234',
   whatsapp_phone_invalid: 'Use international format, e.g. +18095551234',
-  whatsapp_send_test: 'Send test WhatsApp'
+  whatsapp_send_test: 'Send test WhatsApp',
+  planner: 'Planner',
+  planner_unscheduled: 'Unscheduled work orders',
+  planner_no_unscheduled: 'No unscheduled work orders',
+  planner_technician_load: 'Load by technician',
+  planner_no_load: 'No assigned technicians in this period',
+  planner_technician: 'Technician',
+  planner_all_technicians: 'All technicians',
+  planner_legend: 'Priority:',
+  planner_technician_overlap: 'Warning: the technician has overlapping work orders in this time slot',
+  planner_schedule_failed: 'The work order could not be scheduled',
+  planner_load_failed: 'The planner could not be loaded'
 };
 
 export default locale;

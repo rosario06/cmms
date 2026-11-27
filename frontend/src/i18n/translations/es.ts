@@ -2163,7 +2163,18 @@ const esJSON = {
   whatsapp_test_phone: 'Teléfono de prueba',
   whatsapp_phone_helper: 'Formato: +18095551234',
   whatsapp_phone_invalid: 'Use el formato internacional, p. ej. +18095551234',
-  whatsapp_send_test: 'Enviar WhatsApp de prueba'
+  whatsapp_send_test: 'Enviar WhatsApp de prueba',
+  planner: 'Planificador',
+  planner_unscheduled: 'Órdenes sin programar',
+  planner_no_unscheduled: 'No hay órdenes sin programar',
+  planner_technician_load: 'Carga por técnico',
+  planner_no_load: 'No hay técnicos asignados en este período',
+  planner_technician: 'Técnico',
+  planner_all_technicians: 'Todos los técnicos',
+  planner_legend: 'Prioridad:',
+  planner_technician_overlap: 'Aviso: el técnico tiene órdenes de trabajo solapadas en este horario',
+  planner_schedule_failed: 'No se pudo programar la orden de trabajo',
+  planner_load_failed: 'No se pudo cargar el planificador'
 };
 
 export default esJSON;

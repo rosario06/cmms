@@ -141,6 +141,7 @@ const CreatePurchaseOrders = Loader(
 );
 const Locations = Loader(lazy(() => import('../content/own/Locations')));
 const WorkOrders = Loader(lazy(() => import('../content/own/WorkOrders')));
+const Planner = Loader(lazy(() => import('../content/own/Planner')));
 
 const VendorsAndCustomers = Loader(
   lazy(() => import('../content/own/VendorsAndCustomers'))
@@ -359,6 +360,10 @@ const appRoutes = [
       { path: '', element: <WorkOrders /> },
       { path: ':workOrderId', element: <WorkOrders /> }
     ]
+  },
+  {
+    path: 'planner',
+    children: [{ path: '', element: <Planner /> }]
   },
   {
     path: 'inventory',

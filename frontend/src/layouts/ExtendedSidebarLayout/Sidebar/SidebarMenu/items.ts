@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import CalendarMonthTwoToneIcon from '@mui/icons-material/CalendarMonthTwoTone';
 import AnalyticsTwoToneIcon from '@mui/icons-material/AnalyticsTwoTone';
 import InsertChartTwoToneIcon from '@mui/icons-material/InsertChartTwoTone';
 import HealthAndSafetyTwoToneIcon from '@mui/icons-material/HealthAndSafetyTwoTone';
@@ -56,6 +57,12 @@ const ownMenuItems: MenuItems[] = [
         name: 'work_orders',
         link: '/app/work-orders',
         icon: AssignmentTwoToneIcon
+      },
+      {
+        name: 'planner',
+        link: '/app/planner',
+        icon: CalendarMonthTwoToneIcon,
+        permission: PermissionEntity.WORK_ORDERS
       },
       {
         name: 'preventive_maintenance',
