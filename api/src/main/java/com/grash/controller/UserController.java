@@ -52,7 +52,8 @@ public class UserController {
         }
         if (enabledOnly) searchCriteria.getFilterFields().add(FilterField.builder()
                 .field("enabled").value(true).operation("eq").build());
-        return ResponseEntity.ok(userService.findBySearchCriteria(searchCriteria).map(userMapper::toResponseDtoWithShift));
+        return ResponseEntity.ok(userService.findBySearchCriteria(searchCriteria)
+                .map(savedUser -> hideFinancialRates(userMapper.toResponseDtoWithShift(savedUser), user)));
     }
 
     @PostMapping("/invite")
@@ -100,6 +101,24 @@ public class UserController {
         if (optionalUser.isPresent()) {
             User savedUser = optionalUser.get();
             if (savedUser.canBeEditedBy(requester)) {
+                boolean canEditBilling = requester.getRole().getEditOtherPermissions()
+                        .contains(PermissionEntity.PEOPLE_AND_TEAMS);
+                // only an actual change is refused: clients resend the whole user object (unchanged values) when a
+                // user saves their own profile
+                boolean costChanged = (userReq.getInternalHourlyCost() != null
+                        && Double.compare(userReq.getInternalHourlyCost(), savedUser.getInternalHourlyCost()) != 0)
+                        || (userReq.getBillableHourlyRate() != null
+                        && Double.compare(userReq.getBillableHourlyRate(), savedUser.getBillableHourlyRate()) != 0);
+                if (costChanged && !canEditBilling)
+                    throw new CustomException("You don't have permission to edit hourly cost and billable rate",
+                            HttpStatus.FORBIDDEN);
+                Long savedScheduleId = savedUser.getWorkSchedule() == null ? null : savedUser.getWorkSchedule().getId();
+                Long requestedScheduleId = userReq.getWorkSchedule() == null ? null : userReq.getWorkSchedule().getId();
+                boolean scheduleChanged = userReq.getWorkSchedule() != null
+                        && !java.util.Objects.equals(savedScheduleId, requestedScheduleId);
+                if (scheduleChanged && !canEditBilling)
+                    throw new CustomException("You don't have permission to assign a work schedule",
+                            HttpStatus.FORBIDDEN);
                 return userMapper.toResponseDto(userService.update(id, userReq));
             } else {
                 throw new CustomException("You don't have permission", HttpStatus.NOT_ACCEPTABLE);
@@ -117,7 +136,7 @@ public class UserController {
         if (optionalUser.isPresent()) {
             User savedUser = optionalUser.get();
             if (savedUser.canBeViewedBy(user)) {
-                return userMapper.toResponseDtoWithShift(savedUser);
+                return hideFinancialRates(userMapper.toResponseDtoWithShift(savedUser), user);
             } else throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
@@ -153,7 +172,21 @@ public class UserController {
                                       @Parameter(hidden = true) @CurrentUser User requester) {
         return userMapper.toResponseDto(userService.softDeleteUser(id, requester));
     }
+
+    /**
+     * Internal hourly cost and billable rate are financial data: only users with ANALYTICS view (or the user
+     * himself) get them, everybody else receives 0.
+     */
+    private UserResponseDTO hideFinancialRates(UserResponseDTO dto, User requester) {
+        if (dto == null) return null;
+        boolean canSee = requester.getRole() != null && requester.getRole().getViewPermissions() != null
+                && requester.getRole().getViewPermissions().contains(PermissionEntity.ANALYTICS);
+        boolean self = dto.getId() != null && requester.getId() != null
+                && requester.getId().equals(dto.getId().longValue());
+        if (!canSee && !self) {
+            dto.setInternalHourlyCost(0);
+            dto.setBillableHourlyRate(0);
+        }
+        return dto;
+    }
 }
-
-
-

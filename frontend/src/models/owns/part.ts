@@ -12,6 +12,7 @@ export default interface Part extends Audit {
   id: number;
   name: string;
   cost: number;
+  billablePrice?: number | null;
   quantity: number;
   minQuantity: number;
   barcode: string;

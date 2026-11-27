@@ -34,11 +34,13 @@ import {
   getUsers,
   inviteUsers
 } from '../../../slices/user';
+import { getWorkScheduleOptions } from '../../../slices/workSchedule';
 import { OwnUser, UserResponseDTO } from '../../../models/user';
 import { PermissionEntity, Role } from '../../../models/owns/role';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import useAuth from '../../../hooks/useAuth';
+import { toNumberOrNull } from '../Contracts/utils';
 import Form from '../components/form';
 import * as Yup from 'yup';
 import { IField } from '../type';
@@ -81,7 +83,9 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
   const [shiftModalUser, setShiftModalUser] = useState<UserResponseDTO>();
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const { peopleId } = useParams();
-  const { hasEditPermission, user } = useAuth();
+  const { hasEditPermission, hasViewPermission, user } = useAuth();
+  const canSeeFinancials = hasViewPermission(PermissionEntity.ANALYTICS);
+  const { workScheduleOptions } = useSelector((state) => state.workSchedules);
   const [enabledOnly, setEnabledOnly] = useState<boolean>(true);
   const { users, loadingGet, singleUser, lastWeekInvitations } = useSelector(
     (state) => state.users
@@ -138,6 +142,23 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
     ]);
   };
   const debouncedQueryChange = useMemo(() => debounce(onQueryChange, 1300), []);
+
+  // the backend only accepts cost, rate and schedule changes from roles with
+  // editOther PEOPLE_AND_TEAMS (editing your own record is not enough)
+  const hasEditOtherPeople = !!user?.role?.editOtherPermissions?.includes(
+    PermissionEntity.PEOPLE_AND_TEAMS
+  );
+  const canEditFinancials = canSeeFinancials && hasEditOtherPeople;
+  const canEditWorkSchedule =
+    !!currentUser &&
+    hasEditOtherPeople &&
+    hasEditPermission(PermissionEntity.PEOPLE_AND_TEAMS, currentUser);
+
+  useEffect(() => {
+    if (openUpdateModal && canEditWorkSchedule) {
+      dispatch(getWorkScheduleOptions()).catch(() => null);
+    }
+  }, [openUpdateModal, canEditWorkSchedule]);
 
   const onEditSuccess = () => {
     setOpenUpdateModal(false);
@@ -200,6 +221,36 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
       type: 'number',
       label: t('hourly_rate')
     },
+    ...(canEditFinancials
+      ? [
+          {
+            name: 'internalHourlyCost',
+            type: 'number',
+            label: t('financial_internal_hourly_cost')
+          } as IField,
+          {
+            name: 'billableHourlyRate',
+            type: 'number',
+            label: t('financial_billable_hourly_rate')
+          } as IField
+        ]
+      : []),
+    ...(canEditWorkSchedule
+      ? [
+          {
+            name: 'workSchedule',
+            type: 'select',
+            label: t('work_schedule_user_field'),
+            placeholder: t('work_schedule_user_placeholder'),
+            items: workScheduleOptions.map((schedule) => ({
+              label: schedule.defaultSchedule
+                ? `${schedule.name} (${t('work_schedule_default')})`
+                : schedule.name,
+              value: schedule.id
+            }))
+          } as IField
+        ]
+      : []),
     {
       name: 'role',
       type: 'select',
@@ -225,6 +276,11 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
     }
     return fields;
   };
+  const nonNegativeNumber = Yup.number()
+    .transform((value, original) => (original === '' ? undefined : value))
+    .typeError(t('financial_invalid_number'))
+    .min(0, t('financial_invalid_number'))
+    .nullable();
   const renderEditUserModal = () => (
     <Dialog
       fullWidth
@@ -254,11 +310,23 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
           <Form
             fields={getFields()}
             validation={Yup.object().shape({
-              password: Yup.string().min(12, t('invalid_password')).nullable()
+              password: Yup.string().min(12, t('invalid_password')).nullable(),
+              internalHourlyCost: nonNegativeNumber,
+              billableHourlyRate: nonNegativeNumber
             })}
             submitText={t('save')}
             values={{
               rate: currentUser?.rate,
+              internalHourlyCost: currentUser?.internalHourlyCost ?? '',
+              billableHourlyRate: currentUser?.billableHourlyRate ?? '',
+              workSchedule: currentUser?.workSchedule?.id
+                ? {
+                    label:
+                      currentUser.workSchedule.name ??
+                      String(currentUser.workSchedule.id),
+                    value: currentUser.workSchedule.id
+                  }
+                : null,
               role: currentUser
                 ? {
                     label:
@@ -272,10 +340,29 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
             }}
             onChange={({ field, e }) => {}}
             onSubmit={async (values) => {
+              // the backend rejects (403) these fields without editOther PEOPLE_AND_TEAMS
+              const baseUser: Partial<UserResponseDTO> = { ...currentUser };
+              delete baseUser.internalHourlyCost;
+              delete baseUser.billableHourlyRate;
+              delete baseUser.workSchedule;
               return dispatch(
                 editUser(currentUser.id, {
-                  ...currentUser,
+                  ...baseUser,
                   rate: values.rate ?? currentUser.rate,
+                  ...(canEditFinancials
+                    ? {
+                        internalHourlyCost: toNumberOrNull(
+                          values.internalHourlyCost
+                        ),
+                        billableHourlyRate: toNumberOrNull(
+                          values.billableHourlyRate
+                        )
+                      }
+                    : {}),
+                  // an object without id removes the schedule
+                  ...(canEditWorkSchedule
+                    ? { workSchedule: formatSelect(values.workSchedule) ?? {} }
+                    : {}),
                   newPassword: values.password ?? null
                 })
               )

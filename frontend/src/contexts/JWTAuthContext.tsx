@@ -755,8 +755,14 @@ export const AuthProvider: FC<AuthProviderProps> = (props) => {
     });
   };
   const patchUser = async (values: Partial<OwnUser>): Promise<void> => {
+    // The backend answers 403 when these fields are sent by someone without
+    // editOther PEOPLE_AND_TEAMS, so they are only sent if explicitly requested.
+    const currentUser: Partial<OwnUser> = { ...state.user };
+    delete currentUser.internalHourlyCost;
+    delete currentUser.billableHourlyRate;
+    delete currentUser.workSchedule;
     const user = await api.patch<UserResponseDTO>(`users/${state.user.id}`, {
-      ...state.user,
+      ...currentUser,
       ...values
     });
     dispatch({

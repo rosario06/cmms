@@ -164,6 +164,7 @@ public class WorkloadService {
             assignedUser = userService.findByIdAndCompany(dto.getPrimaryUserId(), user.getCompany().getId())
                     .orElseThrow(() -> new CustomException("Assigned user not found", HttpStatus.NOT_FOUND));
         }
+        Long previousPrimaryUserId = workOrder.getPrimaryUser() != null ? workOrder.getPrimaryUser().getId() : null;
         workOrder.setPrimaryUser(assignedUser);
         if (assigningUser && dto.getEstimatedDuration() != null) {
             workOrder.setEstimatedDuration(dto.getEstimatedDuration());
@@ -247,7 +248,10 @@ public class WorkloadService {
             workOrder.setEstimatedStartDate(null);
         }
 
-        return workOrderService.save(workOrder);
+        WorkOrder saved = workOrderService.save(workOrder);
+        // the technician's work schedule may change the business hours SLA deadlines
+        workOrderService.reapplySlaOnReassignment(saved == null ? workOrder : saved, previousPrimaryUserId);
+        return saved;
     }
 
     public int getUserCapacityForDay(User user, LocalDate date) {

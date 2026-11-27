@@ -8,8 +8,10 @@ import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 
-@Mapper(componentModel = "spring", uses = {SuperAccountRelationMapper.class, FileMapper.class})
+@Mapper(componentModel = "spring", uses = {SuperAccountRelationMapper.class, FileMapper.class, WorkScheduleMapper.class})
 public abstract class UserMapper {
+    // the work schedule is validated against the company and set by UserService
+    @Mapping(target = "workSchedule", ignore = true)
     public abstract User updateUser(@MappingTarget User entity, UserPatchDTO dto);
 
     @Lazy

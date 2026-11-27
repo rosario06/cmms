@@ -471,6 +471,53 @@ class UserControllerTest extends AbstractControllerTest {
         }
 
         @Test
+        void patch_workScheduleWithEditOtherPermission_isAccepted() throws Exception {
+            setCurrentUser(clientUser);
+            when(userService.whoami(any())).thenReturn(clientUser);
+            when(userService.findByIdAndCompany(4L, 1L)).thenReturn(Optional.of(targetUser));
+            when(userService.update(eq(4L), any(UserPatchDTO.class))).thenReturn(targetUser);
+            when(userMapper.toResponseDto(targetUser)).thenReturn(userResponseDto);
+
+            mockMvc.perform(patch("/users/4")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"workSchedule\":{\"id\":5}}"))
+                    .andExpect(status().isOk());
+
+            org.mockito.ArgumentCaptor<UserPatchDTO> captor = org.mockito.ArgumentCaptor.forClass(UserPatchDTO.class);
+            org.mockito.Mockito.verify(userService).update(eq(4L), captor.capture());
+            org.junit.jupiter.api.Assertions.assertEquals(5L, captor.getValue().getWorkSchedule().getId());
+        }
+
+        @Test
+        void patch_workScheduleOnSelfWithoutEditOtherPermission_returns403() throws Exception {
+            setCurrentUser(clientUserWithoutPermission);
+            when(userService.whoami(any())).thenReturn(clientUserWithoutPermission);
+            when(userService.findByIdAndCompany(3L, 1L)).thenReturn(Optional.of(clientUserWithoutPermission));
+
+            mockMvc.perform(patch("/users/3")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"workSchedule\":{\"id\":5}}"))
+                    .andExpect(status().isForbidden());
+
+            org.mockito.Mockito.verify(userService, org.mockito.Mockito.never()).update(any(), any());
+        }
+
+        @Test
+        void patch_unchangedBillingValuesOnSelfWithoutEditOtherPermission_isAccepted() throws Exception {
+            setCurrentUser(clientUserWithoutPermission);
+            when(userService.whoami(any())).thenReturn(clientUserWithoutPermission);
+            when(userService.findByIdAndCompany(3L, 1L)).thenReturn(Optional.of(clientUserWithoutPermission));
+            when(userService.update(eq(3L), any(UserPatchDTO.class))).thenReturn(clientUserWithoutPermission);
+            when(userMapper.toResponseDto(clientUserWithoutPermission)).thenReturn(userResponseDto);
+
+            // the client resends the whole profile: values equal to the stored ones must not be refused
+            mockMvc.perform(patch("/users/3")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"internalHourlyCost\":0,\"billableHourlyRate\":0}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
         void getById_returnsUserResponseDTO() throws Exception {
             setCurrentUser(clientUser);
             when(userService.whoami(any())).thenReturn(clientUser);

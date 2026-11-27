@@ -63,6 +63,54 @@ Think of it like **Jira for technicians**.
 - 📍 Manage locations with Google Maps integration.
 - 📑 Create and track service requests.
 
+### Planner
+
+- 🗓️ Visual calendar of work orders (month, week and day views) at `/app/planner`.
+- 🖱️ Drag and drop to reschedule, or resize to change the estimated duration.
+- 📋 Side panel with unassigned work orders and a technician workload panel.
+- ⚠️ Warns about overlapping work orders for the same technician.
+
+### QR Labels & Attendance
+
+- 🏷️ Print or download QR labels for work orders and assets.
+- 📲 Technician check-in / check-out by scanning the QR code (or typing `WO:<id>` when the camera is not available).
+- ⏱️ Records arrival, departure and minutes on site; the work order moves to *In progress* on check-in.
+- 📜 Attendance history per work order, with an "On site" indicator while a technician is checked in.
+- ℹ️ Camera scanning requires Chrome/Android over HTTPS.
+
+### Service Contracts & SLA
+
+Available at `/app/contracts` and `/app/work-schedules`.
+
+- 📄 Service contracts and retainers: billing cycle, monthly fee, included hours, retainer balance, hourly rate override and parts markup.
+- 📊 Progress bar of consumed hours / retainer balance per contract. Hours are deducted automatically when a linked work order is completed.
+- ⏲️ SLA policies per priority (first response and resolution time, penalty). Each work order shows a green / yellow / red SLA badge with a countdown.
+- 🕒 Optional business-hours SLA: configurable work schedules with several shifts per day (night shifts included), a holidays table (yearly recurring or one-off) and a schedule assignable to each technician.
+- ℹ️ Changing a schedule or a holiday does not recalculate the SLA of work orders that are already open.
+
+### Costs, Margins & Invoicing
+
+Available at `/app/cost-centers` and `/app/invoices`.
+
+- 💰 Cost centers with a budget, an alert threshold and a budget execution bar. Administrators are notified when the threshold is reached.
+- 🧮 Two rates per technician (internal cost vs billable rate) and two prices per part (cost vs sale price). Cost, billable amount and net margin of each work order are recalculated automatically.
+- 📈 Profitability report by customer and by work order. The financial summary of a work order is only shown to users with the Analytics permission.
+- 🧾 Native invoicing (`INV-2026-0001`): generate an invoice from a completed work order (hours covered by the contract are discounted) or periodically from a contract, issue it, mark it as paid or cancel it.
+- 🖨️ Printable invoice view (save it as PDF from the browser) and KPIs for total invoiced, pending and overdue amounts.
+- 🔒 Contracts, costs and invoices need the Analytics permission to be viewed and the Settings permission to be edited.
+
+### Integrations Center
+
+Available at `/app/integrations`.
+
+- 🔑 API keys and 🔗 webhooks (these two tabs require a license).
+- 📬 Webhook delivery logs with status, response and manual retry. Signed with HMAC-SHA256 (`X-Webhook-Signature` and `X-Atlas-Signature` headers).
+- 📡 IoT: telemetry ingestion at `POST /api/public/iot/telemetry` with a per-company token (shown once, stored hashed). Readings are stored in the asset's meter and can raise alerts.
+- 🗺️ Maps, 💳 payments and 💬 WhatsApp (Meta Cloud API or Twilio) configuration, with a "test connection" button.
+- 🔔 WhatsApp notifications for new, assigned and completed work orders.
+- 🔒 Secrets are encrypted with AES-256-GCM and never returned by the API (only `hasX` / last 4 characters).
+- 🧪 [Postman collection](./dev-docs/postman/atlas-integrations.postman_collection.json) to test the endpoints.
+
 You can check out the [complete list of features](api/Current%20features.pdf).
 
 We'd love to have **new contributors**, so feel free to join us!  
@@ -115,6 +163,7 @@ Need customization or production setup? Continue reading below ↓
 | GCP_PROJECT_ID              | No       | The Google Cloud project ID, also found in the `GCP_JSON` file.                                                                                                                                                                                                                                                     | (empty)               |
 | GCP_BUCKET_NAME             | No       | GCP Bucket Name                                                                                                                                                                                                                                                                                                     | (empty)               |
 | MAIL_RECIPIENTS             | No       | Comma-separated email addresses of the super admins where to send information emails like new signups. You can provide your email address.                                                                                                                                                                          | (empty)               |
+| INTEGRATIONS_ENCRYPTION_KEY | No       | Key used to encrypt the secrets saved in the Integrations Center (AES-256-GCM). Generate with `openssl rand -base64 32`. Without it, integration secrets cannot be saved. Do not change it afterwards, or saved secrets become unreadable.                                                                  | (empty)               |
 | LICENSE_KEY                 | No       | [Atlas CMMS license key](https://atlas-cmms.com/pricing?type=selfhosted) to get access to advanced features.                                                                                                                                                                                                        | (empty)               |
 | ENABLE_SSO                  | No       | Enables or disables SSO. (`true` or `false` ) Requires `OAUTH2_PROVIDER`, `OAUTH2_CLIENT_ID` and `OAUTH2_CLIENT_SECRET`. Make sure to add `PUBLIC_SERVER_URL` as authorized origin and `${PUBLIC_SERVER_URL}/api/oauth2/callback/${OAUTH2_PROVIDER}` as authorized redirection URI in your Oauth2 provider settings | false                 |
 | OAUTH2_PROVIDER             | No       | Oauth2 provider `google` or `microsoft`                                                                                                                                                                                                                                                                             | (empty)               |

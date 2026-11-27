@@ -85,6 +85,54 @@ public class WorkOrder extends WorkOrderBase {
     @NotAudited
     private Date firstTimeToReact;
 
+    @Schema(description = "Service contract this work order is billed under", implementation = IdDTO.class)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @NotAudited
+    private ServiceContract serviceContract;
+
+    @Schema(description = "SLA policy applied to this work order", implementation = IdDTO.class)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @NotAudited
+    private SlaPolicy slaPolicy;
+
+    @NotAudited
+    private Date slaFirstResponseDueAt;
+
+    @NotAudited
+    private Date slaResolutionDueAt;
+
+    @NotAudited
+    private Date firstRespondedAt;
+
+    @NotAudited
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    private com.grash.model.enums.SlaStatus slaStatus;
+
+    @Schema(description = "Cost center charged for this work order", implementation = IdDTO.class)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @NotAudited
+    private CostCenter costCenter;
+
+    @NotAudited
+    private double totalInternalCost;
+
+    @NotAudited
+    private double totalBillableAmount;
+
+    @NotAudited
+    private double netMarginAmount;
+
+    @NotAudited
+    private double marginPercentage;
+
+    /** Labor hours of this work order that were covered by the service contract (included hours / retainer). */
+    @NotAudited
+    private double contractCoveredHours;
+
+    /** True once contract hours/retainer were deducted for this work order (makes the deduction idempotent). */
+    @NotAudited
+    private boolean contractHoursApplied;
+
     @NotAudited
     @OneToMany(mappedBy = "workOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @ArraySchema(schema = @Schema(implementation = IdDTO.class))

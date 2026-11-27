@@ -12,6 +12,7 @@ import com.grash.model.enums.PermissionEntity;
 import com.grash.model.enums.RoleType;
 import com.grash.security.CurrentUser;
 import com.grash.service.RequestService;
+import com.grash.utils.FinancialVisibility;
 import com.grash.utils.TenantAspectUtils;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -87,7 +88,7 @@ public class RequestController {
     public WorkOrderShowDTO approve(@PathVariable("id") Long id,
                                     @Parameter(description = "Request approval data") @RequestBody RequestApproveDTO requestApproveDTO,
                                     @Parameter(hidden = true) @CurrentUser User user) {
-        return workOrderMapper.toShowDto(requestService.approve(id, requestApproveDTO, user));
+        return FinancialVisibility.apply(workOrderMapper.toShowDto(requestService.approve(id, requestApproveDTO, user)), user);
     }
 
     @PatchMapping("/{id}/cancel")

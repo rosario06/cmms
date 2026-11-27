@@ -54,6 +54,7 @@ import UserAvatars from '../components/UserAvatars';
 import { CustomSnackBarContext } from '../../../contexts/CustomSnackBarContext';
 import { CompanySettingsContext } from '../../../contexts/CompanySettingsContext';
 import useAuth from '../../../hooks/useAuth';
+import { toNumberOrNull } from '../Contracts/utils';
 import NoRowsMessageWrapper from '../components/NoRowsMessageWrapper';
 import {
   getImageAndFiles,
@@ -313,6 +314,9 @@ const Parts = ({ setAction }: PropsType) => {
     newValues.customers = formatSelectMultiple(newValues.customers);
     newValues.vendors = formatSelectMultiple(newValues.vendors);
     newValues.category = formatSelect(newValues.category);
+    if ('billablePrice' in newValues) {
+      newValues.billablePrice = toNumberOrNull(newValues.billablePrice);
+    }
     return formatCustomFields(newValues);
   };
 
@@ -423,6 +427,16 @@ const Parts = ({ setAction }: PropsType) => {
       label: t('cost'),
       placeholder: t('enter_part_cost')
     },
+    ...(hasViewPermission(PermissionEntity.ANALYTICS)
+      ? [
+          {
+            name: 'billablePrice',
+            type: 'number',
+            label: t('financial_part_billable_price'),
+            placeholder: t('financial_part_billable_price')
+          } as IField
+        ]
+      : []),
     {
       name: 'quantity',
       type: 'number',
@@ -513,6 +527,11 @@ const Parts = ({ setAction }: PropsType) => {
   ];
   const shape = {
     name: Yup.string().required(t('required_part_name')),
+    billablePrice: Yup.number()
+      .transform((value, original) => (original === '' ? undefined : value))
+      .typeError(t('financial_invalid_number'))
+      .min(0, t('financial_invalid_number'))
+      .nullable(),
     ...getCustomFieldsRequiredShape(customFields, CustomFieldEntityType.PART, t)
   };
   const renderPartAddModal = () => (

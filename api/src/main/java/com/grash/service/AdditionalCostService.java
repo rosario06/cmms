@@ -27,6 +27,7 @@ public class AdditionalCostService {
 
     private final AdditionalCostMapper additionalCostMapper;
     private final LicenseService licenseService;
+    private final WorkOrderFinancialService workOrderFinancialService;
 
     @Transactional
     public AdditionalCost create(AdditionalCost additionalCost) {
@@ -35,6 +36,7 @@ public class AdditionalCostService {
         Sanitizer.sanitizeAdditionalCost(additionalCost);
         AdditionalCost savedAdditionalCost = additionalCostRepository.saveAndFlush(additionalCost);
         em.refresh(savedAdditionalCost);
+        recalculateFinancials(savedAdditionalCost);
         return savedAdditionalCost;
     }
 
@@ -47,6 +49,7 @@ public class AdditionalCostService {
             Sanitizer.sanitizeAdditionalCost(updatedAdditionalCost);
             updatedAdditionalCost = additionalCostRepository.saveAndFlush(updatedAdditionalCost);
             em.refresh(updatedAdditionalCost);
+            recalculateFinancials(updatedAdditionalCost);
             return updatedAdditionalCost;
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
@@ -55,8 +58,19 @@ public class AdditionalCostService {
         return additionalCostRepository.findAll();
     }
 
+    private void recalculateFinancials(AdditionalCost additionalCost) {
+        if (additionalCost != null && additionalCost.getWorkOrder() != null)
+            workOrderFinancialService.recalculateQuietly(additionalCost.getWorkOrder().getId());
+    }
+
+    @Transactional
     public void delete(Long id) {
+        Optional<AdditionalCost> optionalAdditionalCost = additionalCostRepository.findById(id);
         additionalCostRepository.deleteById(id);
+        optionalAdditionalCost.ifPresent(additionalCost -> {
+            additionalCostRepository.flush();
+            recalculateFinancials(additionalCost);
+        });
     }
 
     public Optional<AdditionalCost> findById(Long id) {

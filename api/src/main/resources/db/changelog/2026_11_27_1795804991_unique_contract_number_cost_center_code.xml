@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="1795804991-1" author="Atlas">
+        <addUniqueConstraint tableName="service_contract" columnNames="company_id, contract_number" constraintName="uq_service_contract_company_number"/>
+    </changeSet>
+    <changeSet id="1795804991-2" author="Atlas">
+        <addUniqueConstraint tableName="cost_center" columnNames="company_id, code" constraintName="uq_cost_center_company_code"/>
+    </changeSet>
+</databaseChangeLog>

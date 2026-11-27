@@ -32,6 +32,12 @@ public class UserResponseDTO {
     @Schema(description = "Hourly rate")
     private long rate;
 
+    @Schema(description = "Internal hourly cost")
+    private double internalHourlyCost;
+
+    @Schema(description = "Hourly rate billed to customers")
+    private double billableHourlyRate;
+
     @Schema(description = "Job title")
     private String jobTitle;
 
@@ -87,4 +93,7 @@ public class UserResponseDTO {
     private ShiftConfigurationShowDTO shiftConfiguration;
 
     private Language language;
+
+    @Schema(description = "Work schedule (business hours) of the user")
+    private WorkScheduleMiniDTO workSchedule;
 }

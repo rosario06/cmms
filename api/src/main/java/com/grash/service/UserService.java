@@ -20,6 +20,7 @@ import com.grash.model.enums.RoleCode;
 import com.grash.model.enums.RoleType;
 import com.grash.repository.UserRepository;
 import com.grash.repository.VerificationTokenRepository;
+import com.grash.repository.WorkScheduleRepository;
 import com.grash.security.CustomUserDetail;
 import com.grash.security.JwtTokenProvider;
 import com.grash.utils.Helper;
@@ -78,6 +79,7 @@ public class UserService {
     private final IntercomService intercomService;
     private final RefreshTokenService refreshTokenService;
     private final ApiKeyService apiKeyService;
+    private final WorkScheduleRepository workScheduleRepository;
 
     @Value("${api.host}")
     private String PUBLIC_API_URL;
@@ -442,6 +444,14 @@ public class UserService {
                 refreshTokenService.revokeAllForUser(savedUser);
             }
             User updatedUser = userMapper.updateUser(savedUser, userReq);
+            // an object without id removes the work schedule; null leaves it unchanged
+            if (userReq.getWorkSchedule() != null) {
+                Long scheduleId = userReq.getWorkSchedule().getId();
+                updatedUser.setWorkSchedule(scheduleId == null ? null :
+                        workScheduleRepository.findByIdAndCompany_Id(scheduleId, savedUser.getCompany().getId())
+                                .orElseThrow(() -> new CustomException("Work schedule not found",
+                                        HttpStatus.NOT_FOUND)));
+            }
             Sanitizer.sanitizeUser(updatedUser);
             updatedUser = userRepository.saveAndFlush(updatedUser);
             em.refresh(updatedUser);
