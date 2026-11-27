@@ -253,4 +253,6 @@
              relativeToChangelogFile="true"/>
     <include file="changelog/2026_11_27_1795804991_unique_contract_number_cost_center_code.xml"
              relativeToChangelogFile="true"/>
+    <include file="changelog/2026_11_27_1795805640_work_schedules_holidays.xml"
+             relativeToChangelogFile="true"/>
 </databaseChangeLog>

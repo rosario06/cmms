@@ -48,4 +48,8 @@ public class UserPatchDTO {
 
     @Schema(description = "User language")
     private Language language;
+
+    @Schema(description = "Work schedule (business hours) of the user; send an object without id to remove it. " +
+            "Requires edit permission on people", implementation = IdDTO.class)
+    private IdDTO workSchedule;
 }

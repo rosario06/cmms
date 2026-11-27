@@ -41,6 +41,13 @@ export interface ServiceContract extends Audit {
   lastInvoicedAt: string | null;
 }
 
+/** Payload accepted by POST / PATCH (the customer is sent by id only). */
+export type ServiceContractInput = Partial<
+  Omit<ServiceContract, keyof Audit | 'customer'>
+> & {
+  customer?: { id: number; name?: string } | null;
+};
+
 export interface ServiceContractMini {
   id: number;
   name: string;

@@ -20,11 +20,11 @@ public class SlaPolicyPostDTO {
     @Schema(description = "Work order priority this policy applies to, NONE when empty")
     private Priority priority;
 
-    @Schema(description = "Minutes (wall clock, no business hours) to the first response. 0 = no target")
+    @Schema(description = "Minutes (wall clock unless useBusinessHours) to the first response. 0 = no target")
     @PositiveOrZero
     private int firstResponseMinutes;
 
-    @Schema(description = "Minutes (wall clock, no business hours) to the resolution. 0 = no target")
+    @Schema(description = "Minutes (wall clock unless useBusinessHours) to the resolution. 0 = no target")
     @PositiveOrZero
     private int resolutionMinutes;
 
@@ -35,4 +35,10 @@ public class SlaPolicyPostDTO {
     @Schema(description = "Contract of the policy. Empty means a general policy of the company", implementation =
             IdDTO.class)
     private ServiceContract serviceContract;
+
+    @Schema(description = "Count only business hours (work schedule) in the deadlines")
+    private boolean useBusinessHours;
+
+    @Schema(description = "Schedule of the policy. Empty: schedule of the assigned technician, then the company default", implementation = IdDTO.class)
+    private IdDTO workSchedule;
 }

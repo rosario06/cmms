@@ -34,6 +34,7 @@ import {
   getUsers,
   inviteUsers
 } from '../../../slices/user';
+import { getWorkScheduleOptions } from '../../../slices/workSchedule';
 import { OwnUser, UserResponseDTO } from '../../../models/user';
 import { PermissionEntity, Role } from '../../../models/owns/role';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
@@ -84,6 +85,7 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
   const { peopleId } = useParams();
   const { hasEditPermission, hasViewPermission, user } = useAuth();
   const canSeeFinancials = hasViewPermission(PermissionEntity.ANALYTICS);
+  const { workScheduleOptions } = useSelector((state) => state.workSchedules);
   const [enabledOnly, setEnabledOnly] = useState<boolean>(true);
   const { users, loadingGet, singleUser, lastWeekInvitations } = useSelector(
     (state) => state.users
@@ -140,6 +142,16 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
     ]);
   };
   const debouncedQueryChange = useMemo(() => debounce(onQueryChange, 1300), []);
+
+  // the work schedule can only be changed by who can edit this person
+  const canEditWorkSchedule =
+    !!currentUser && hasEditPermission(PermissionEntity.PEOPLE_AND_TEAMS, currentUser);
+
+  useEffect(() => {
+    if (openUpdateModal && canEditWorkSchedule) {
+      dispatch(getWorkScheduleOptions()).catch(() => null);
+    }
+  }, [openUpdateModal, canEditWorkSchedule]);
 
   const onEditSuccess = () => {
     setOpenUpdateModal(false);
@@ -216,6 +228,22 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
           } as IField
         ]
       : []),
+    ...(canEditWorkSchedule
+      ? [
+          {
+            name: 'workSchedule',
+            type: 'select',
+            label: t('work_schedule_user_field'),
+            placeholder: t('work_schedule_user_placeholder'),
+            items: workScheduleOptions.map((schedule) => ({
+              label: schedule.defaultSchedule
+                ? `${schedule.name} (${t('work_schedule_default')})`
+                : schedule.name,
+              value: schedule.id
+            }))
+          } as IField
+        ]
+      : []),
     {
       name: 'role',
       type: 'select',
@@ -284,6 +312,14 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
               rate: currentUser?.rate,
               internalHourlyCost: currentUser?.internalHourlyCost ?? '',
               billableHourlyRate: currentUser?.billableHourlyRate ?? '',
+              workSchedule: currentUser?.workSchedule?.id
+                ? {
+                    label:
+                      currentUser.workSchedule.name ??
+                      String(currentUser.workSchedule.id),
+                    value: currentUser.workSchedule.id
+                  }
+                : null,
               role: currentUser
                 ? {
                     label:
@@ -310,6 +346,10 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
                           values.billableHourlyRate
                         )
                       }
+                    : {}),
+                  // an object without id removes the schedule
+                  ...(canEditWorkSchedule
+                    ? { workSchedule: formatSelect(values.workSchedule) ?? {} }
                     : {}),
                   newPassword: values.password ?? null
                 })

@@ -32,4 +32,9 @@ public class SlaPolicyPatchDTO {
     @Schema(description = "Contract; send an object without id to make the policy general", implementation =
             IdDTO.class)
     private ServiceContract serviceContract;
+
+    private Boolean useBusinessHours;
+
+    @Schema(description = "Schedule; send an object without id to remove it", implementation = IdDTO.class)
+    private IdDTO workSchedule;
 }

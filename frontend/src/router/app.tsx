@@ -143,6 +143,9 @@ const Locations = Loader(lazy(() => import('../content/own/Locations')));
 const WorkOrders = Loader(lazy(() => import('../content/own/WorkOrders')));
 const Planner = Loader(lazy(() => import('../content/own/Planner')));
 const Contracts = Loader(lazy(() => import('../content/own/Contracts')));
+const WorkSchedules = Loader(
+  lazy(() => import('../content/own/WorkSchedules'))
+);
 const CostCenters = Loader(lazy(() => import('../content/own/CostCenters')));
 const Invoices = Loader(lazy(() => import('../content/own/Invoices')));
 
@@ -374,6 +377,14 @@ const appRoutes = [
       { path: '', element: <Contracts /> },
       { path: 'service-contracts', element: <Contracts /> },
       { path: 'sla-policies', element: <Contracts /> }
+    ]
+  },
+  {
+    path: 'work-schedules',
+    children: [
+      { path: '', element: <WorkSchedules /> },
+      { path: 'schedules', element: <WorkSchedules /> },
+      { path: 'holidays', element: <WorkSchedules /> }
     ]
   },
   {

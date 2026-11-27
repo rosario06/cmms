@@ -15,4 +15,6 @@ public class SlaPolicyShowDTO extends AuditShowDTO {
     private int resolutionMinutes;
     private double penaltyPercent;
     private ServiceContractMiniDTO serviceContract;
+    private boolean useBusinessHours;
+    private WorkScheduleMiniDTO workSchedule;
 }

@@ -1,7 +1,7 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createSlice } from '@reduxjs/toolkit';
 import type { AppThunk } from 'src/store';
-import { SlaPolicy } from '../models/owns/slaPolicy';
+import { SlaPolicy, SlaPolicyInput } from '../models/owns/slaPolicy';
 import api from '../utils/api';
 import { getInitialPage, Page, SearchCriteria } from '../models/owns/page';
 import { revertAll } from 'src/utils/redux';
@@ -83,14 +83,14 @@ export const getSlaPolicies =
   };
 
 export const addSlaPolicy =
-  (slaPolicy: Partial<SlaPolicy>): AppThunk =>
+  (slaPolicy: SlaPolicyInput): AppThunk =>
   async (dispatch) => {
     const response = await api.post<SlaPolicy>(basePath, slaPolicy);
     dispatch(slice.actions.addSlaPolicy({ slaPolicy: response }));
   };
 
 export const editSlaPolicy =
-  (id: number, slaPolicy: Partial<SlaPolicy>): AppThunk =>
+  (id: number, slaPolicy: SlaPolicyInput): AppThunk =>
   async (dispatch) => {
     const response = await api.patch<SlaPolicy>(
       `${basePath}/${id}`,

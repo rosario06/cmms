@@ -93,4 +93,7 @@ public class UserResponseDTO {
     private ShiftConfigurationShowDTO shiftConfiguration;
 
     private Language language;
+
+    @Schema(description = "Work schedule (business hours) of the user")
+    private WorkScheduleMiniDTO workSchedule;
 }

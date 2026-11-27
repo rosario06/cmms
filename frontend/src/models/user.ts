@@ -3,6 +3,7 @@ import { Role } from './owns/role';
 import File, { FileThumbnailDTO } from './owns/file';
 import { UiConfiguration } from './owns/uiConfiguration';
 import { SupportedLanguage } from '../i18n/i18n';
+import { WorkScheduleRef } from './owns/workSchedule';
 
 export type UserRole = 'admin' | 'customer' | 'subscriber';
 
@@ -30,6 +31,8 @@ export interface OwnUser extends Audit {
   rate: number;
   internalHourlyCost?: number | null;
   billableHourlyRate?: number | null;
+  /** null/absent = no specific schedule (the company default one applies) */
+  workSchedule?: WorkScheduleRef | null;
   phone: string;
   ownsCompany: boolean;
   jobTitle: string;

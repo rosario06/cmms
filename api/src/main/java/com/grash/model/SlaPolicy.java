@@ -16,7 +16,7 @@ import lombok.ToString;
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true, exclude = {"serviceContract"})
+@ToString(callSuper = true, exclude = {"serviceContract", "workSchedule"})
 public class SlaPolicy extends CompanyAudit {
     @NotNull
     @Column(nullable = false)
@@ -35,4 +35,11 @@ public class SlaPolicy extends CompanyAudit {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private ServiceContract serviceContract;
+
+    /** When true the deadlines only count business hours (see SlaTrackingService for the schedule resolution). */
+    private boolean useBusinessHours = false;
+
+    /** Schedule of the policy; null falls back to the schedule of the technician, then to the company default. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    private WorkSchedule workSchedule;
 }

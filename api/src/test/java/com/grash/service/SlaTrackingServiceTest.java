@@ -3,16 +3,22 @@ package com.grash.service;
 import com.grash.event.WorkOrderCompletedEvent;
 import com.grash.model.Company;
 import com.grash.model.Customer;
+import com.grash.model.Holiday;
 import com.grash.model.ServiceContract;
 import com.grash.model.SlaPolicy;
+import com.grash.model.User;
 import com.grash.model.WorkOrder;
+import com.grash.model.WorkSchedule;
+import com.grash.model.WorkScheduleShift;
 import com.grash.model.enums.ContractStatus;
 import com.grash.model.enums.Priority;
 import com.grash.model.enums.SlaStatus;
 import com.grash.model.enums.Status;
+import com.grash.repository.HolidayRepository;
 import com.grash.repository.ServiceContractRepository;
 import com.grash.repository.SlaPolicyRepository;
 import com.grash.repository.WorkOrderSlaRepository;
+import com.grash.repository.WorkScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +26,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,6 +48,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,6 +63,10 @@ class SlaTrackingServiceTest {
     private ServiceContractRepository serviceContractRepository;
     @Mock
     private WorkOrderSlaRepository workOrderSlaRepository;
+    @Mock
+    private WorkScheduleRepository workScheduleRepository;
+    @Mock
+    private HolidayRepository holidayRepository;
 
     private Date now = new Date(BASE);
     private SlaTrackingService service;
@@ -60,7 +75,8 @@ class SlaTrackingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SlaTrackingService(slaPolicyRepository, serviceContractRepository, workOrderSlaRepository) {
+        service = new SlaTrackingService(slaPolicyRepository, serviceContractRepository, workOrderSlaRepository,
+                workScheduleRepository, holidayRepository) {
             @Override
             Date now() {
                 return now;
@@ -435,5 +451,167 @@ class SlaTrackingServiceTest {
         service.refreshOpenWorkOrders();
 
         verify(workOrderSlaRepository, never()).updateSlaStatus(any(), any());
+    }
+
+    // ------------------------------------------------------------ business hours
+
+    private static Date sd(int year, int month, int day, int hour, int minute) {
+        return Date.from(ZonedDateTime.of(year, month, day, hour, minute, 0, 0,
+                ZoneId.of("America/Santo_Domingo")).toInstant());
+    }
+
+    /** Monday to Friday between start and end, America/Santo_Domingo. */
+    private WorkSchedule schedule(long id, String start, String end, boolean active) {
+        WorkSchedule schedule = new WorkSchedule();
+        schedule.setId(id);
+        schedule.setName("schedule " + id);
+        schedule.setTimezone("America/Santo_Domingo");
+        schedule.setActive(active);
+        for (int day = 1; day <= 5; day++) {
+            WorkScheduleShift shift = new WorkScheduleShift();
+            shift.setDayOfWeek(day);
+            shift.setStartTime(LocalTime.parse(start));
+            shift.setEndTime(LocalTime.parse(end));
+            schedule.getShifts().add(shift);
+        }
+        return schedule;
+    }
+
+    /** Policy (30 minutes first response, 90 resolution) that counts business hours and is the general HIGH one. */
+    private SlaPolicy businessHoursPolicy(WorkSchedule schedule) {
+        SlaPolicy policy = policy(30L, 30, 90);
+        policy.setUseBusinessHours(true);
+        policy.setWorkSchedule(schedule);
+        when(slaPolicyRepository.findFirstByCompany_IdAndServiceContractIsNullAndPriorityOrderByIdAsc(1L,
+                Priority.HIGH)).thenReturn(Optional.of(policy));
+        return policy;
+    }
+
+    private User technician(WorkSchedule schedule) {
+        User user = new User();
+        user.setId(77L);
+        user.setWorkSchedule(schedule);
+        return user;
+    }
+
+    @Test
+    void applySla_businessHoursUsesTheScheduleOfThePolicyFirst() {
+        businessHoursPolicy(schedule(1L, "08:00", "17:00", true));
+        workOrder.setPrimaryUser(technician(schedule(2L, "06:00", "10:00", true)));
+        workOrder.setCreatedAt(sd(2025, 3, 3, 16, 30)); // Monday
+
+        service.applySla(workOrder);
+
+        // first response: 30 minutes -> Monday 17:00; resolution: 30 on Monday + 60 on Tuesday
+        assertEquals(sd(2025, 3, 3, 17, 0), workOrder.getSlaFirstResponseDueAt());
+        assertEquals(sd(2025, 3, 4, 9, 0), workOrder.getSlaResolutionDueAt());
+        verify(workScheduleRepository, never())
+                .findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(anyLong());
+    }
+
+    @Test
+    void applySla_businessHoursUsesTheScheduleOfThePrimaryUserWhenThePolicyHasNone() {
+        businessHoursPolicy(null);
+        workOrder.setPrimaryUser(technician(schedule(2L, "06:00", "10:00", true)));
+        workOrder.setCreatedAt(sd(2025, 3, 3, 9, 30)); // Monday
+
+        service.applySla(workOrder);
+
+        // first response: 30 minutes until 10:00; resolution: 30 minutes + 60 on Tuesday from 06:00
+        assertEquals(sd(2025, 3, 3, 10, 0), workOrder.getSlaFirstResponseDueAt());
+        assertEquals(sd(2025, 3, 4, 7, 0), workOrder.getSlaResolutionDueAt());
+        verify(workScheduleRepository, never())
+                .findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(anyLong());
+    }
+
+    @Test
+    void applySla_businessHoursUsesTheCompanyDefaultWhenTheTechnicianHasNoSchedule() {
+        businessHoursPolicy(null);
+        workOrder.setPrimaryUser(technician(null));
+        workOrder.setCreatedAt(sd(2025, 3, 3, 16, 30));
+        when(workScheduleRepository.findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(1L))
+                .thenReturn(Optional.of(schedule(3L, "08:00", "17:00", true)));
+
+        service.applySla(workOrder);
+
+        assertEquals(sd(2025, 3, 4, 9, 0), workOrder.getSlaResolutionDueAt());
+    }
+
+    @Test
+    void applySla_businessHoursUsesTheCompanyDefaultWhenThereIsNoPrimaryUser() {
+        businessHoursPolicy(null);
+        workOrder.setCreatedAt(sd(2025, 3, 3, 16, 30));
+        when(workScheduleRepository.findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(1L))
+                .thenReturn(Optional.of(schedule(3L, "08:00", "17:00", true)));
+
+        service.applySla(workOrder);
+
+        assertEquals(sd(2025, 3, 4, 9, 0), workOrder.getSlaResolutionDueAt());
+    }
+
+    @Test
+    void applySla_businessHoursWithoutAnyScheduleUsesWallClockMinutes() {
+        businessHoursPolicy(null);
+        workOrder.setPrimaryUser(technician(null));
+        workOrder.setCreatedAt(at(BASE));
+        when(workScheduleRepository.findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(1L))
+                .thenReturn(Optional.empty());
+
+        service.applySla(workOrder);
+
+        assertEquals(at(BASE + 30 * MINUTE), workOrder.getSlaFirstResponseDueAt());
+        assertEquals(at(BASE + 90 * MINUTE), workOrder.getSlaResolutionDueAt());
+        verify(holidayRepository, never()).findByCompany_Id(anyLong());
+    }
+
+    @Test
+    void applySla_inactiveSchedulesAreSkipped() {
+        businessHoursPolicy(schedule(1L, "08:00", "17:00", false));
+        workOrder.setPrimaryUser(technician(schedule(2L, "06:00", "10:00", false)));
+        workOrder.setCreatedAt(at(BASE));
+        when(workScheduleRepository.findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(1L))
+                .thenReturn(Optional.empty());
+
+        service.applySla(workOrder);
+
+        assertEquals(at(BASE + 90 * MINUTE), workOrder.getSlaResolutionDueAt());
+    }
+
+    @Test
+    void applySla_withoutBusinessHoursKeepsWallClockMinutesAndIgnoresSchedules() {
+        SlaPolicy policy = businessHoursPolicy(schedule(1L, "08:00", "17:00", true));
+        policy.setUseBusinessHours(false);
+        workOrder.setCreatedAt(sd(2025, 3, 3, 16, 30));
+
+        service.applySla(workOrder);
+
+        assertEquals(new Date(sd(2025, 3, 3, 16, 30).getTime() + 90 * MINUTE), workOrder.getSlaResolutionDueAt());
+        verifyNoInteractions(workScheduleRepository, holidayRepository);
+    }
+
+    @Test
+    void applySla_businessHoursSkipsTheHolidaysOfTheCompany() {
+        businessHoursPolicy(schedule(1L, "08:00", "17:00", true));
+        workOrder.setCreatedAt(sd(2025, 3, 7, 16, 0)); // Friday
+        Holiday monday = new Holiday();
+        monday.setDate(LocalDate.of(2025, 3, 10));
+        when(holidayRepository.findByCompany_Id(1L)).thenReturn(List.of(monday));
+
+        service.applySla(workOrder);
+
+        // first response: 30 minutes on Friday; resolution: 60 on Friday + 30 on Tuesday (Monday is a holiday)
+        assertEquals(sd(2025, 3, 7, 16, 30), workOrder.getSlaFirstResponseDueAt());
+        assertEquals(sd(2025, 3, 11, 8, 30), workOrder.getSlaResolutionDueAt());
+    }
+
+    @Test
+    void applySla_businessHoursDeadlinesFeedTheStatusEvaluation() {
+        businessHoursPolicy(schedule(1L, "08:00", "17:00", true));
+        workOrder.setCreatedAt(sd(2025, 3, 3, 9, 0));
+        now = sd(2025, 3, 3, 12, 0); // resolution deadline at 10:30 -> breached
+
+        service.applySla(workOrder);
+
+        assertEquals(SlaStatus.BREACHED, workOrder.getSlaStatus());
     }
 }

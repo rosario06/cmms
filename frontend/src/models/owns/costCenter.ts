@@ -13,6 +13,14 @@ export interface CostCenter extends Audit {
   active: boolean;
 }
 
+/** Payload accepted by POST / PATCH (relations are sent by id only). */
+export type CostCenterInput = Partial<
+  Omit<CostCenter, keyof Audit | 'customer' | 'location'>
+> & {
+  customer?: { id: number; name?: string } | null;
+  location?: { id: number; name?: string } | null;
+};
+
 export interface CostCenterMini {
   id: number;
   name: string;

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import CalendarMonthTwoToneIcon from '@mui/icons-material/CalendarMonthTwoTone';
 import DescriptionTwoToneIcon from '@mui/icons-material/DescriptionTwoTone';
+import ScheduleTwoToneIcon from '@mui/icons-material/ScheduleTwoTone';
 import AccountBalanceWalletTwoToneIcon from '@mui/icons-material/AccountBalanceWalletTwoTone';
 import ReceiptLongTwoToneIcon from '@mui/icons-material/ReceiptLongTwoTone';
 import AnalyticsTwoToneIcon from '@mui/icons-material/AnalyticsTwoTone';
@@ -71,6 +72,12 @@ const ownMenuItems: MenuItems[] = [
         name: 'contracts_and_sla',
         link: '/app/contracts',
         icon: DescriptionTwoToneIcon,
+        permission: PermissionEntity.ANALYTICS
+      },
+      {
+        name: 'work_schedules_and_holidays',
+        link: '/app/work-schedules',
+        icon: ScheduleTwoToneIcon,
         permission: PermissionEntity.ANALYTICS
       },
       {

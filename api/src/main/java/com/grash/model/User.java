@@ -43,6 +43,12 @@ public class User extends CompanyAudit {
     @Schema(description = "Hourly rate billed to customers for this user's work")
     private double billableHourlyRate;
 
+    @Schema(description = "Work schedule (business hours) of the user, used by the SLA of the work orders he is " +
+            "assigned to")
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    private WorkSchedule workSchedule;
+
     @OneToOne(fetch = FetchType.LAZY)
     private File image;
 

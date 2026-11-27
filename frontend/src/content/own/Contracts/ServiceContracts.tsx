@@ -1,16 +1,23 @@
 import {
+  Alert,
   Box,
+  Button,
   Chip,
+  CircularProgress,
   debounce,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
   LinearProgress,
+  Link,
   Stack,
+  Tooltip,
   Typography
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
+import ReceiptLongTwoToneIcon from '@mui/icons-material/ReceiptLongTwoTone';
+import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import * as Yup from 'yup';
 import { useContext, useEffect, useMemo, useState } from 'react';
@@ -38,6 +45,7 @@ import {
   editServiceContract,
   getServiceContracts
 } from '../../../slices/serviceContract';
+import { createInvoiceFromContract } from '../../../slices/invoice';
 import { CustomSnackBarContext } from '../../../contexts/CustomSnackBarContext';
 import { CompanySettingsContext } from '../../../contexts/CompanySettingsContext';
 import { getErrorMessage } from '../../../utils/api';
@@ -92,6 +100,11 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
   const [currentContract, setCurrentContract] = useState<ServiceContract>();
   const [openEdit, setOpenEdit] = useState<boolean>(false);
   const [openDelete, setOpenDelete] = useState<boolean>(false);
+  const [contractToInvoice, setContractToInvoice] =
+    useState<ServiceContract | null>(null);
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [invoicedContract, setInvoicedContract] =
+    useState<ServiceContract | null>(null);
 
   const {
     sorting,
@@ -312,6 +325,30 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
       );
   };
 
+  const handleGenerateInvoice = async () => {
+    const contract = contractToInvoice;
+    setContractToInvoice(null);
+    if (!contract) return;
+    setGeneratingId(contract.id);
+    setInvoicedContract(null);
+    try {
+      await dispatch(createInvoiceFromContract(contract.id));
+      setInvoicedContract(contract);
+    } catch (err) {
+      showSnackBar(
+        getBillingErrorMessage(
+          err,
+          'invoiceFromContract',
+          t,
+          t('invoice_generate_failure_contract')
+        ),
+        'error'
+      );
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
   const columnHelper = createColumnHelper<ServiceContract>();
 
   const columns: CustomDatagridColumn2<ServiceContract>[] = [
@@ -413,7 +450,52 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
       },
       size: 220,
       enableSorting: false
-    })
+    }),
+    ...(canWrite
+      ? [
+          columnHelper.display({
+            id: 'generateInvoice',
+            header: () => t('invoice_generate'),
+            cell: ({ row }) => {
+              const contract = row.original;
+              const isActive = contract.status === 'ACTIVE';
+              const isGenerating = generatingId === contract.id;
+              return (
+                <Tooltip
+                  title={
+                    isActive
+                      ? t('invoice_generate_from_contract_hint')
+                      : t('invoice_generate_contract_not_active')
+                  }
+                >
+                  <span>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={!isActive || generatingId !== null}
+                      startIcon={
+                        isGenerating ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <ReceiptLongTwoToneIcon fontSize="small" />
+                        )
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setContractToInvoice(contract);
+                      }}
+                    >
+                      {t('invoice_generate')}
+                    </Button>
+                  </span>
+                </Tooltip>
+              );
+            },
+            size: 170,
+            enableSorting: false
+          })
+        ]
+      : [])
   ];
 
   return (
@@ -544,6 +626,20 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
           <SearchInput onChange={debouncedQueryChange} />
         </Box>
       </Stack>
+      {invoicedContract && (
+        <Alert
+          severity="success"
+          sx={{ width: '95%', mb: 1 }}
+          onClose={() => setInvoicedContract(null)}
+        >
+          {`${t('invoice_generate_contract_success', {
+            contract: invoicedContract.contractNumber
+          })} `}
+          <Link component={RouterLink} to="/app/invoices">
+            {t('invoice_view_invoices')}
+          </Link>
+        </Alert>
+      )}
       <Box sx={{ width: '95%' }}>
         <CustomDatagrid2
           columns={columns}
@@ -573,6 +669,15 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
           onPinnedColumnsChange={setPinnedColumns}
         />
       </Box>
+      <ConfirmDialog
+        open={!!contractToInvoice}
+        onCancel={() => setContractToInvoice(null)}
+        onConfirm={handleGenerateInvoice}
+        confirmText={t('invoice_generate')}
+        question={t('invoice_generate_contract_confirm', {
+          contract: contractToInvoice?.contractNumber ?? ''
+        })}
+      />
       <ConfirmDialog
         open={openDelete}
         onCancel={() => {

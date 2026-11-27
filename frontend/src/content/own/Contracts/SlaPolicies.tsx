@@ -1,5 +1,6 @@
 import {
   Box,
+  Chip,
   debounce,
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ import {
   getSlaPolicies
 } from '../../../slices/slaPolicy';
 import { getServiceContractOptions } from '../../../slices/serviceContract';
+import { getWorkScheduleOptions } from '../../../slices/workSchedule';
 import { CustomSnackBarContext } from '../../../contexts/CustomSnackBarContext';
 import { getErrorMessage } from '../../../utils/api';
 import { formatSelect } from '../../../utils/formatters';
@@ -50,7 +52,8 @@ const fieldMapping: Record<string, string> = {
   firstResponseMinutes: 'firstResponseMinutes',
   resolutionMinutes: 'resolutionMinutes',
   penaltyPercent: 'penaltyPercent',
-  serviceContract: 'serviceContract.name'
+  serviceContract: 'serviceContract.name',
+  useBusinessHours: 'useBusinessHours'
 };
 
 const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
@@ -58,6 +61,7 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
   const dispatch = useDispatch();
   const { slaPolicies, loadingGet } = useSelector((state) => state.slaPolicies);
   const { contractOptions } = useSelector((state) => state.serviceContracts);
+  const { workScheduleOptions } = useSelector((state) => state.workSchedules);
   const { hasCreatePermission } = useAuth();
   const canWrite = hasCreatePermission(PermissionEntity.SETTINGS);
   const { showSnackBar } = useContext(CustomSnackBarContext);
@@ -111,7 +115,10 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
   }, [criteria]);
 
   useEffect(() => {
-    if (canWrite) dispatch(getServiceContractOptions()).catch(() => null);
+    if (canWrite) {
+      dispatch(getServiceContractOptions()).catch(() => null);
+      dispatch(getWorkScheduleOptions()).catch(() => null);
+    }
   }, [canWrite]);
 
   const handleFormChange = ({ field, e }: { field: string; e: unknown }) => {
@@ -135,6 +142,12 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
       ? `${contract.contractNumber} - ${contract.name}`
       : contract.name,
     value: contract.id
+  }));
+  const scheduleItems = workScheduleOptions.map((schedule) => ({
+    label: schedule.defaultSchedule
+      ? `${schedule.name} (${t('work_schedule_default')})`
+      : schedule.name,
+    value: schedule.id
   }));
 
   const fields: Array<IField> = [
@@ -184,6 +197,19 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
       label: t('sla_contract_optional'),
       placeholder: t('sla_general_policy'),
       items: contractItems
+    },
+    {
+      name: 'useBusinessHours',
+      type: 'checkbox',
+      label: t('sla_business_hours_only'),
+      relatedFields: [{ field: 'workSchedule', value: false, hide: true }]
+    },
+    {
+      name: 'workSchedule',
+      type: 'select',
+      label: t('sla_business_hours_schedule'),
+      placeholder: t('sla_business_hours_schedule_empty'),
+      items: scheduleItems
     }
   ];
 
@@ -208,14 +234,23 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
       .nullable()
   };
 
-  const formatValues = (values) => ({
-    name: values.name,
-    priority: values.priority?.value,
-    firstResponseMinutes: toNumberOrNull(values.firstResponseMinutes),
-    resolutionMinutes: toNumberOrNull(values.resolutionMinutes),
-    penaltyPercent: toNumberOrNull(values.penaltyPercent) ?? 0,
-    serviceContract: formatSelect(values.serviceContract)
-  });
+  const formatValues = (values, isEdit: boolean) => {
+    const useBusinessHours = !!values.useBusinessHours;
+    return {
+      name: values.name,
+      priority: values.priority?.value,
+      firstResponseMinutes: toNumberOrNull(values.firstResponseMinutes),
+      resolutionMinutes: toNumberOrNull(values.resolutionMinutes),
+      penaltyPercent: toNumberOrNull(values.penaltyPercent) ?? 0,
+      serviceContract: formatSelect(values.serviceContract),
+      useBusinessHours,
+      // empty = assignee's schedule or the default one; an object without id
+      // clears the relation when editing
+      workSchedule:
+        (useBusinessHours ? formatSelect(values.workSchedule) : null) ??
+        (isEdit ? {} : null)
+    };
+  };
 
   const getFormValues = (policy?: SlaPolicy) => {
     const priority = policy?.priority ?? 'MEDIUM';
@@ -229,6 +264,13 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
         ? {
             label: policy.serviceContract.name,
             value: policy.serviceContract.id
+          }
+        : null,
+      useBusinessHours: policy?.useBusinessHours ?? false,
+      workSchedule: policy?.workSchedule?.id
+        ? {
+            label: policy.workSchedule.name ?? String(policy.workSchedule.id),
+            value: policy.workSchedule.id
           }
         : null
     };
@@ -281,6 +323,28 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
       header: () => t('sla_contract'),
       cell: (info) => info.getValue() || t('sla_general_policy'),
       size: 200
+    }),
+    columnHelper.accessor('useBusinessHours', {
+      id: 'useBusinessHours',
+      header: () => t('sla_business_hours_column'),
+      cell: (info) => {
+        const policy = info.row.original;
+        return info.getValue() ? (
+          <Box>
+            <Chip
+              size="small"
+              color="info"
+              label={t('sla_business_hours_short')}
+            />
+            <Typography variant="caption" display="block">
+              {policy.workSchedule?.name ?? t('sla_business_hours_auto')}
+            </Typography>
+          </Box>
+        ) : (
+          t('sla_calendar_hours')
+        );
+      },
+      size: 180
     })
   ];
 
@@ -314,7 +378,7 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
             values={getFormValues()}
             onChange={handleFormChange}
             onSubmit={async (values) =>
-              dispatch(addSlaPolicy(formatValues(values)))
+              dispatch(addSlaPolicy(formatValues(values, false)))
                 .then(() => {
                   handleCloseModal();
                   showSnackBar(t('sla_create_success'), 'success');
@@ -380,7 +444,9 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
               values={getFormValues(currentPolicy)}
               onChange={handleFormChange}
               onSubmit={async (values) =>
-                dispatch(editSlaPolicy(currentPolicy.id, formatValues(values)))
+                dispatch(
+                  editSlaPolicy(currentPolicy.id, formatValues(values, true))
+                )
                   .then(() => {
                     setOpenEdit(false);
                     showSnackBar(t('changes_saved_success'), 'success');

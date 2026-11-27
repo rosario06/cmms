@@ -56,6 +56,11 @@ import {
 } from '../../../slices/invoice';
 import { getCustomersMini } from '../../../slices/customer';
 import { getErrorMessage } from '../../../utils/api';
+import {
+  BillingErrorKind,
+  getBillingErrorMessage,
+  isInvoiceStateError
+} from '../../../utils/billingErrors';
 import InvoicePreview from './InvoicePreview';
 import {
   formatInvoiceAmount,
@@ -78,6 +83,13 @@ const SUCCESS_KEYS: Record<InvoiceAction, string> = {
   markPaid: 'invoice_mark_paid_success',
   cancel: 'invoice_cancel_success',
   delete: 'invoice_delete_success'
+};
+
+const ACTION_ERROR_KINDS: Record<InvoiceAction, BillingErrorKind> = {
+  issue: 'invoice_issue',
+  markPaid: 'invoice_pay',
+  cancel: 'invoice_cancel',
+  delete: 'invoice_delete'
 };
 
 function Invoices() {
@@ -175,7 +187,20 @@ function Invoices() {
       reloadSummary();
       if (action === 'delete') reloadInvoices();
     } catch (err) {
-      showSnackBar(getErrorMessage(err, t('invoice_action_failure')), 'error');
+      showSnackBar(
+        getBillingErrorMessage(
+          err,
+          ACTION_ERROR_KINDS[action],
+          t,
+          t('invoice_action_failure')
+        ),
+        'error'
+      );
+      // The state seen by the user is stale: show the real one.
+      if (isInvoiceStateError(err)) {
+        reloadInvoices();
+        reloadSummary();
+      }
     }
   };
 
@@ -208,7 +233,21 @@ function Invoices() {
       showSnackBar(t('invoice_edit_success'), 'success');
       reloadSummary();
     } catch (err) {
-      showSnackBar(getErrorMessage(err, t('invoice_action_failure')), 'error');
+      showSnackBar(
+        getBillingErrorMessage(
+          err,
+          'invoice_edit',
+          t,
+          t('invoice_action_failure')
+        ),
+        'error'
+      );
+      if (isInvoiceStateError(err)) {
+        // The invoice is no longer editable (or gone): close and refresh.
+        setEditingInvoice(null);
+        reloadInvoices();
+        reloadSummary();
+      }
     } finally {
       setSaving(false);
     }

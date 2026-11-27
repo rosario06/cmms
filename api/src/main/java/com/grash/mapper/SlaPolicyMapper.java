@@ -11,14 +11,14 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.Mappings;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(componentModel = "spring", uses = {ServiceContractMapper.class},
+@Mapper(componentModel = "spring", uses = {ServiceContractMapper.class, WorkScheduleMapper.class},
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface SlaPolicyMapper {
     // the contract is validated against the company and set by the service
-    @Mappings({@Mapping(target = "serviceContract", ignore = true)})
+    @Mappings({@Mapping(target = "serviceContract", ignore = true), @Mapping(target = "workSchedule", ignore = true)})
     SlaPolicy updateSlaPolicy(@MappingTarget SlaPolicy entity, SlaPolicyPatchDTO dto);
 
-    @Mappings({@Mapping(target = "serviceContract", ignore = true)})
+    @Mappings({@Mapping(target = "serviceContract", ignore = true), @Mapping(target = "workSchedule", ignore = true)})
     SlaPolicy fromPostDto(SlaPolicyPostDTO dto);
 
     SlaPolicyShowDTO toShowDto(SlaPolicy model);

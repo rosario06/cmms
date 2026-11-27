@@ -2,16 +2,22 @@ package com.grash.service;
 
 import com.grash.event.WorkOrderCompletedEvent;
 import com.grash.model.Customer;
+import com.grash.model.Holiday;
 import com.grash.model.ServiceContract;
 import com.grash.model.SlaPolicy;
+import com.grash.model.User;
 import com.grash.model.WorkOrder;
+import com.grash.model.WorkSchedule;
 import com.grash.model.enums.ContractStatus;
 import com.grash.model.enums.Priority;
 import com.grash.model.enums.SlaStatus;
 import com.grash.model.enums.Status;
+import com.grash.repository.HolidayRepository;
 import com.grash.repository.ServiceContractRepository;
 import com.grash.repository.SlaPolicyRepository;
 import com.grash.repository.WorkOrderSlaRepository;
+import com.grash.repository.WorkScheduleRepository;
+import com.grash.utils.BusinessHoursCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -20,7 +26,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
@@ -31,8 +40,18 @@ import java.util.stream.Collectors;
 /**
  * Assigns the SLA policy of a work order, computes its deadlines and keeps its {@link SlaStatus} up to date.
  * <p>
- * Deadlines are wall clock minutes added to the creation date of the work order (createdAt): business hours,
- * weekends and holidays are NOT taken into account.
+ * Deadlines are minutes added to the creation date of the work order (createdAt). By default they are wall clock
+ * minutes. When the policy has useBusinessHours they only count the business hours of a work schedule, resolved in
+ * this order: schedule of the policy, schedule of the primary user of the work order, default schedule of the
+ * company; inactive schedules are skipped and, when none exists, wall clock minutes are used (INFO log). Holidays of
+ * the company (and of that schedule) are skipped.
+ * <p>
+ * The deadlines are stored: a later change of a schedule or of a holiday does NOT recalculate the open work orders
+ * (they are recalculated when their priority, contract or primary user changes).
+ * <p>
+ * AT_RISK uses the calendar time elapsed over the calendar time between createdAt and the due date (80%), also for
+ * business hours deadlines (the due date is already expressed in business time, so the ratio is monotonic and
+ * consistent).
  * <p>
  * This bean only depends on repositories (not on WorkOrderService) so that WorkOrderService can call it without a
  * dependency cycle.
@@ -47,6 +66,8 @@ public class SlaTrackingService {
     private final SlaPolicyRepository slaPolicyRepository;
     private final ServiceContractRepository serviceContractRepository;
     private final WorkOrderSlaRepository workOrderSlaRepository;
+    private final WorkScheduleRepository workScheduleRepository;
+    private final HolidayRepository holidayRepository;
 
     /**
      * Current time; overridable in tests (no global Clock bean exists).
@@ -81,8 +102,14 @@ public class SlaTrackingService {
             SlaPolicy sla = policy.get();
             Date createdAt = workOrder.getCreatedAt() == null ? now : workOrder.getCreatedAt();
             workOrder.setSlaPolicy(sla);
-            workOrder.setSlaFirstResponseDueAt(addMinutes(createdAt, sla.getFirstResponseMinutes()));
-            workOrder.setSlaResolutionDueAt(addMinutes(createdAt, sla.getResolutionMinutes()));
+            Optional<WorkSchedule> schedule = sla.isUseBusinessHours() ?
+                    resolveSchedule(sla, workOrder, companyId) : Optional.empty();
+            Collection<Holiday> holidays = schedule.isPresent() ?
+                    holidayRepository.findByCompany_Id(companyId) : Collections.emptyList();
+            workOrder.setSlaFirstResponseDueAt(addMinutes(createdAt, sla.getFirstResponseMinutes(),
+                    schedule.orElse(null), holidays));
+            workOrder.setSlaResolutionDueAt(addMinutes(createdAt, sla.getResolutionMinutes(),
+                    schedule.orElse(null), holidays));
             workOrder.setSlaStatus(Status.COMPLETE.equals(workOrder.getStatus()) ? evaluateCompleted(workOrder, now) :
                     evaluate(createdAt, workOrder.getSlaFirstResponseDueAt(), workOrder.getSlaResolutionDueAt(),
                             workOrder.getFirstRespondedAt(), now));
@@ -197,11 +224,40 @@ public class SlaTrackingService {
                 priority);
     }
 
+    /**
+     * Schedule used by a business hours policy: policy, then primary user of the work order, then company default.
+     * Inactive schedules are skipped. Empty (wall clock minutes) when there is none.
+     */
+    Optional<WorkSchedule> resolveSchedule(SlaPolicy policy, WorkOrder workOrder, Long companyId) {
+        WorkSchedule policySchedule = policy.getWorkSchedule();
+        if (policySchedule != null && policySchedule.isActive()) return Optional.of(policySchedule);
+        User primaryUser = workOrder.getPrimaryUser();
+        WorkSchedule userSchedule = primaryUser == null ? null : primaryUser.getWorkSchedule();
+        if (userSchedule != null && userSchedule.isActive()) return Optional.of(userSchedule);
+        Optional<WorkSchedule> companyDefault =
+                workScheduleRepository.findFirstByCompany_IdAndDefaultScheduleTrueAndActiveTrueOrderByIdAsc(companyId);
+        if (companyDefault.isEmpty())
+            log.info("SLA policy {} uses business hours but no work schedule applies to work order {}: using wall " +
+                    "clock minutes", policy.getId(), workOrder.getId());
+        return companyDefault;
+    }
+
     // ---------------------------------------------------------------- pure calculations
 
     static Date addMinutes(Date start, int minutes) {
         if (minutes <= 0) return null;
         return new Date(start.getTime() + minutes * 60_000L);
+    }
+
+    /**
+     * Business hours variant: a null schedule means wall clock minutes.
+     */
+    static Date addMinutes(Date start, int minutes, WorkSchedule schedule, Collection<Holiday> holidays) {
+        if (schedule == null) return addMinutes(start, minutes);
+        if (minutes <= 0) return null;
+        Instant due = BusinessHoursCalculator.addBusinessMinutes(Instant.ofEpochMilli(start.getTime()), minutes,
+                schedule, holidays);
+        return new Date(due.toEpochMilli());
     }
 
     static boolean hasSla(WorkOrder workOrder) {

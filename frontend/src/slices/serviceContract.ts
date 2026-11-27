@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { AppThunk } from 'src/store';
 import {
   ServiceContract,
+  ServiceContractInput,
   ServiceContractMini,
   ServiceContractUsage
 } from '../models/owns/serviceContract';
@@ -120,7 +121,7 @@ export const getServiceContractUsage =
     api.get<ServiceContractUsage>(`${basePath}/${id}/usage`);
 
 export const addServiceContract =
-  (serviceContract: Partial<ServiceContract>): AppThunk =>
+  (serviceContract: ServiceContractInput): AppThunk =>
   async (dispatch) => {
     const response = await api.post<ServiceContract>(
       basePath,
@@ -133,7 +134,7 @@ export const addServiceContract =
   };
 
 export const editServiceContract =
-  (id: number, serviceContract: Partial<ServiceContract>): AppThunk =>
+  (id: number, serviceContract: ServiceContractInput): AppThunk =>
   async (dispatch) => {
     const response = await api.patch<ServiceContract>(
       `${basePath}/${id}`,

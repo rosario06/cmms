@@ -102,6 +102,8 @@ class UserServiceTest {
     private RefreshTokenService refreshTokenService;
     @Mock
     private ApiKeyService apiKeyService;
+    @Mock
+    private com.grash.repository.WorkScheduleRepository workScheduleRepository;
 
     private Company company;
     private User user;
@@ -1271,6 +1273,71 @@ class UserServiceTest {
             assertNotNull(result);
             verify(em).refresh(user);
             verify(cacheService).putUserInCache(user);
+        }
+
+        @Test
+        void assignsTheWorkScheduleOfTheCompany() {
+            WorkSchedule schedule = new WorkSchedule();
+            schedule.setId(4L);
+            com.grash.dto.IdDTO ref = new com.grash.dto.IdDTO();
+            ref.setId(4L);
+            UserPatchDTO patch = new UserPatchDTO();
+            patch.setWorkSchedule(ref);
+            when(userRepository.existsById(1L)).thenReturn(true);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+            when(userRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(userMapper.updateUser(any(User.class), eq(patch))).thenReturn(user);
+            when(workScheduleRepository.findByIdAndCompany_Id(4L, 1L)).thenReturn(Optional.of(schedule));
+
+            User result = userService.update(1L, patch);
+
+            assertSame(schedule, result.getWorkSchedule());
+        }
+
+        @Test
+        void workScheduleWithoutIdRemovesIt() {
+            user.setWorkSchedule(new WorkSchedule());
+            UserPatchDTO patch = new UserPatchDTO();
+            patch.setWorkSchedule(new com.grash.dto.IdDTO());
+            when(userRepository.existsById(1L)).thenReturn(true);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+            when(userRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(userMapper.updateUser(any(User.class), eq(patch))).thenReturn(user);
+
+            User result = userService.update(1L, patch);
+
+            assertNull(result.getWorkSchedule());
+        }
+
+        @Test
+        void workScheduleOfAnotherCompanyIs404() {
+            com.grash.dto.IdDTO ref = new com.grash.dto.IdDTO();
+            ref.setId(9L);
+            UserPatchDTO patch = new UserPatchDTO();
+            patch.setWorkSchedule(ref);
+            when(userRepository.existsById(1L)).thenReturn(true);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+            when(userMapper.updateUser(any(User.class), eq(patch))).thenReturn(user);
+            when(workScheduleRepository.findByIdAndCompany_Id(9L, 1L)).thenReturn(Optional.empty());
+
+            CustomException ex = assertThrows(CustomException.class, () -> userService.update(1L, patch));
+            assertEquals(HttpStatus.NOT_FOUND, ex.getHttpStatus());
+            verify(userRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        void leavesTheWorkScheduleUnchangedWhenNotSent() {
+            WorkSchedule schedule = new WorkSchedule();
+            user.setWorkSchedule(schedule);
+            UserPatchDTO patch = new UserPatchDTO();
+            patch.setFirstName("Jane");
+            when(userRepository.existsById(1L)).thenReturn(true);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+            when(userRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(userMapper.updateUser(any(User.class), eq(patch))).thenReturn(user);
+
+            assertSame(schedule, userService.update(1L, patch).getWorkSchedule());
+            verifyNoInteractions(workScheduleRepository);
         }
 
         @Test

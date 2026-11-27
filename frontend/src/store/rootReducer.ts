@@ -52,6 +52,8 @@ import { reducer as serviceContractReducer } from 'src/slices/serviceContract';
 import { reducer as slaPolicyReducer } from 'src/slices/slaPolicy';
 import { reducer as costCenterReducer } from 'src/slices/costCenter';
 import { reducer as invoiceReducer } from 'src/slices/invoice';
+import { reducer as workScheduleReducer } from 'src/slices/workSchedule';
+import { reducer as holidayReducer } from 'src/slices/holiday';
 
 const rootReducer = combineReducers({
   customers: customerReducer,
@@ -105,7 +107,9 @@ const rootReducer = combineReducers({
   serviceContracts: serviceContractReducer,
   slaPolicies: slaPolicyReducer,
   costCenters: costCenterReducer,
-  invoices: invoiceReducer
+  invoices: invoiceReducer,
+  workSchedules: workScheduleReducer,
+  holidays: holidayReducer
 });
 
 export default rootReducer;

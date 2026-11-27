@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { AppThunk } from 'src/store';
 import {
   CostCenter,
+  CostCenterInput,
   CostCenterMini,
   CostCenterSummary
 } from '../models/owns/costCenter';
@@ -118,7 +119,7 @@ export const getCostCenterSummary =
     api.get<CostCenterSummary>(`${basePath}/${id}/summary`);
 
 export const addCostCenter =
-  (costCenter: Partial<CostCenter>): AppThunk =>
+  (costCenter: CostCenterInput): AppThunk =>
   async (dispatch) => {
     const response = await api.post<CostCenter>(basePath, costCenter, {
       silentConflict: true
@@ -127,7 +128,7 @@ export const addCostCenter =
   };
 
 export const editCostCenter =
-  (id: number, costCenter: Partial<CostCenter>): AppThunk =>
+  (id: number, costCenter: CostCenterInput): AppThunk =>
   async (dispatch) => {
     const response = await api.patch<CostCenter>(
       `${basePath}/${id}`,

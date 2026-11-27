@@ -2,6 +2,7 @@ package com.grash.service;
 
 import com.grash.advancedsearch.SearchCriteria;
 import com.grash.advancedsearch.SpecificationBuilder;
+import com.grash.dto.IdDTO;
 import com.grash.dto.SlaPolicyPatchDTO;
 import com.grash.dto.SlaPolicyPostDTO;
 import com.grash.exception.CustomException;
@@ -9,9 +10,11 @@ import com.grash.mapper.SlaPolicyMapper;
 import com.grash.model.Company;
 import com.grash.model.ServiceContract;
 import com.grash.model.SlaPolicy;
+import com.grash.model.WorkSchedule;
 import com.grash.model.enums.Priority;
 import com.grash.repository.ServiceContractRepository;
 import com.grash.repository.SlaPolicyRepository;
+import com.grash.repository.WorkScheduleRepository;
 import com.grash.utils.Sanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,6 +32,7 @@ public class SlaPolicyService {
     private final SlaPolicyRepository slaPolicyRepository;
     private final SlaPolicyMapper slaPolicyMapper;
     private final ServiceContractRepository serviceContractRepository;
+    private final WorkScheduleRepository workScheduleRepository;
 
     @Transactional
     public SlaPolicy create(SlaPolicyPostDTO dto, Company company) {
@@ -38,6 +42,7 @@ public class SlaPolicyService {
         policy.setName(Sanitizer.cleanText(dto.getName()));
         policy.setPriority(dto.getPriority() == null ? Priority.NONE : dto.getPriority());
         policy.setServiceContract(resolveContract(dto.getServiceContract(), company));
+        policy.setWorkSchedule(resolveSchedule(dto.getWorkSchedule(), company));
         return slaPolicyRepository.save(policy);
     }
 
@@ -50,6 +55,8 @@ public class SlaPolicyService {
         // an object without id detaches the contract (general policy)
         if (dto.getServiceContract() != null)
             saved.setServiceContract(resolveContract(dto.getServiceContract(), company));
+        // an object without id removes the schedule (technician / company default is used)
+        if (dto.getWorkSchedule() != null) saved.setWorkSchedule(resolveSchedule(dto.getWorkSchedule(), company));
         return slaPolicyRepository.save(saved);
     }
 
@@ -72,6 +79,12 @@ public class SlaPolicyService {
         Pageable page = PageRequest.of(searchCriteria.getPageNum(), searchCriteria.getPageSize(),
                 searchCriteria.getDirection(), searchCriteria.getSortField());
         return slaPolicyRepository.findAll(builder.build(), page);
+    }
+
+    private WorkSchedule resolveSchedule(IdDTO reference, Company company) {
+        if (reference == null || reference.getId() == null) return null;
+        return workScheduleRepository.findByIdAndCompany_Id(reference.getId(), company.getId())
+                .orElseThrow(() -> new CustomException("Work schedule not found", HttpStatus.NOT_FOUND));
     }
 
     private ServiceContract resolveContract(ServiceContract reference, Company company) {

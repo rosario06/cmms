@@ -24,7 +24,7 @@ import { getInvoicePrintHtml } from '../../../slices/invoice';
 import useAuth from '../../../hooks/useAuth';
 import { CustomSnackBarContext } from '../../../contexts/CustomSnackBarContext';
 import { CompanySettingsContext } from '../../../contexts/CompanySettingsContext';
-import { getErrorMessage } from '../../../utils/api';
+import { getBillingErrorMessage } from '../../../utils/billingErrors';
 import { formatInvoiceAmount, getInvoiceStatusColor } from './utils';
 
 interface InvoicePreviewProps {
@@ -71,7 +71,15 @@ const InvoicePreview = ({ invoice, open, onClose }: InvoicePreviewProps) => {
       iframe.srcdoc = html;
       document.body.appendChild(iframe);
     } catch (err) {
-      showSnackBar(getErrorMessage(err, t('invoice_print_failure')), 'error');
+      showSnackBar(
+        getBillingErrorMessage(
+          err,
+          'invoice_print',
+          t,
+          t('invoice_print_failure')
+        ),
+        'error'
+      );
     } finally {
       setPrinting(false);
     }

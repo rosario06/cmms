@@ -4179,6 +4179,93 @@ class WorkOrderServiceTest {
     }
 
     @Nested
+    class ReapplySlaOnReassignment {
+
+        private SlaTrackingService slaTrackingService;
+        private WorkOrder workOrder;
+
+        @BeforeEach
+        void init() {
+            slaTrackingService = mock(SlaTrackingService.class);
+            ReflectionTestUtils.setField(workOrderService, "slaTrackingService", slaTrackingService);
+            workOrder = new WorkOrder();
+            workOrder.setId(1L);
+            workOrder.setCompany(company);
+        }
+
+        private User technician(long id) {
+            User technician = new User();
+            technician.setId(id);
+            return technician;
+        }
+
+        private SlaPolicy policy(boolean useBusinessHours) {
+            SlaPolicy policy = new SlaPolicy();
+            policy.setUseBusinessHours(useBusinessHours);
+            return policy;
+        }
+
+        @Test
+        void recalculatesWhenTheTechnicianChangesAndThePolicyUsesBusinessHours() {
+            workOrder.setPrimaryUser(technician(8L));
+            workOrder.setSlaPolicy(policy(true));
+
+            workOrderService.reapplySlaOnReassignment(workOrder, 5L);
+
+            verify(slaTrackingService).applySla(workOrder);
+        }
+
+        @Test
+        void recalculatesWhenTheFirstTechnicianIsAssigned() {
+            workOrder.setPrimaryUser(technician(8L));
+            workOrder.setSlaPolicy(policy(true));
+
+            workOrderService.reapplySlaOnReassignment(workOrder, null);
+
+            verify(slaTrackingService).applySla(workOrder);
+        }
+
+        @Test
+        void doesNothingWhenTheTechnicianIsTheSame() {
+            workOrder.setPrimaryUser(technician(8L));
+            workOrder.setSlaPolicy(policy(true));
+
+            workOrderService.reapplySlaOnReassignment(workOrder, 8L);
+
+            verifyNoInteractions(slaTrackingService);
+        }
+
+        @Test
+        void doesNothingWhenThePolicyDoesNotUseBusinessHours() {
+            workOrder.setPrimaryUser(technician(8L));
+            workOrder.setSlaPolicy(policy(false));
+
+            workOrderService.reapplySlaOnReassignment(workOrder, 5L);
+
+            verifyNoInteractions(slaTrackingService);
+        }
+
+        @Test
+        void doesNothingWithoutPolicy() {
+            workOrder.setPrimaryUser(technician(8L));
+
+            workOrderService.reapplySlaOnReassignment(workOrder, 5L);
+            workOrderService.reapplySlaOnReassignment(null, 5L);
+
+            verifyNoInteractions(slaTrackingService);
+        }
+
+        @Test
+        void aFailureOfTheSlaServiceDoesNotPropagate() {
+            workOrder.setPrimaryUser(technician(8L));
+            workOrder.setSlaPolicy(policy(true));
+            doThrow(new IllegalStateException("boom")).when(slaTrackingService).applySla(workOrder);
+
+            assertDoesNotThrow(() -> workOrderService.reapplySlaOnReassignment(workOrder, 5L));
+        }
+    }
+
+    @Nested
     class ApplySlaToImported {
 
         private WorkOrder imported(long id) {

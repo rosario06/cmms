@@ -100,7 +100,9 @@ export const getInvoiceSummary =
 export const editInvoice =
   (id: number, invoice: InvoicePatch): AppThunk =>
   async (dispatch) => {
-    const response = await api.patch<Invoice>(`${basePath}/${id}`, invoice);
+    const response = await api.patch<Invoice>(`${basePath}/${id}`, invoice, {
+      silentConflict: true
+    });
     dispatch(slice.actions.editInvoice({ invoice: response }));
   };
 
@@ -109,7 +111,8 @@ const invoiceAction =
   async (dispatch) => {
     const response = await api.patch<Invoice>(
       `${basePath}/${id}/${action}`,
-      {}
+      {},
+      { silentConflict: true }
     );
     dispatch(slice.actions.editInvoice({ invoice: response }));
   };
@@ -126,7 +129,8 @@ export const deleteInvoice =
   (id: number): AppThunk =>
   async (dispatch) => {
     const response = await api.deletes<{ success: boolean }>(
-      `${basePath}/${id}`
+      `${basePath}/${id}`,
+      { silentConflict: true }
     );
     if (response.success) {
       dispatch(slice.actions.deleteInvoice({ id }));

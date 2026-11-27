@@ -105,6 +105,10 @@ public class UserController {
                         && !requester.getRole().getEditOtherPermissions().contains(PermissionEntity.PEOPLE_AND_TEAMS))
                     throw new CustomException("You don't have permission to edit hourly cost and billable rate",
                             HttpStatus.FORBIDDEN);
+                if (userReq.getWorkSchedule() != null
+                        && !requester.getRole().getEditOtherPermissions().contains(PermissionEntity.PEOPLE_AND_TEAMS))
+                    throw new CustomException("You don't have permission to assign a work schedule",
+                            HttpStatus.FORBIDDEN);
                 return userMapper.toResponseDto(userService.update(id, userReq));
             } else {
                 throw new CustomException("You don't have permission", HttpStatus.NOT_ACCEPTABLE);

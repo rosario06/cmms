@@ -166,10 +166,14 @@ public class WorkOrderService {
         WorkOrder savedWorkOrder = workOrderRepository.saveAndFlush(workOrder);
         em.refresh(savedWorkOrder);
         applySla(savedWorkOrder);
+        Long primaryUserIdBeforeWorkflows = savedWorkOrder.getPrimaryUser() != null ?
+                savedWorkOrder.getPrimaryUser().getId() : null;
         notify(savedWorkOrder, Helper.getLocale(company));
         Collection<Workflow> workflows =
                 workflowService.findByMainConditionAndCompany(WFMainCondition.WORK_ORDER_CREATED, company.getId());
         workflows.forEach(workflow -> workflowService.runWorkOrder(workflow, savedWorkOrder));
+        // a workflow may have assigned a technician: his schedule can change the business hours deadlines
+        reapplySlaOnReassignment(savedWorkOrder, primaryUserIdBeforeWorkflows);
         Map<String, Object> webhookPayload = new HashMap<>();
         webhookPayload.put("workOrderId", savedWorkOrder.getId());
         Object serializedWorkOrder = workOrderMapper.toShowDto(savedWorkOrder);
@@ -221,6 +225,21 @@ public class WorkOrderService {
         } catch (RuntimeException e) {
             log.warn("Could not apply the SLA to work order {}: {}", workOrder.getId(), e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Recalculates the SLA deadlines when the primary user changed and the policy of the work order counts business
+     * hours (the schedule of the technician may differ). No-op otherwise. Same guard as {@link #applySla}: a failure
+     * is logged and never aborts the caller.
+     *
+     * @param previousPrimaryUserId primary user before the change (null when there was none)
+     */
+    public void reapplySlaOnReassignment(WorkOrder workOrder, Long previousPrimaryUserId) {
+        if (workOrder == null) return;
+        Long currentPrimaryUserId = workOrder.getPrimaryUser() != null ? workOrder.getPrimaryUser().getId() : null;
+        if (Objects.equals(previousPrimaryUserId, currentPrimaryUserId)) return;
+        if (workOrder.getSlaPolicy() == null || !workOrder.getSlaPolicy().isUseBusinessHours()) return;
+        applySla(workOrder);
     }
 
     /**
@@ -366,6 +385,9 @@ public class WorkOrderService {
             if (!Objects.equals(previousPriority, updatedWorkOrder.getPriority())
                     || !Objects.equals(previousContractId, newContractId)) {
                 applySla(updatedWorkOrder);
+            } else {
+                // a new technician may have another work schedule (business hours SLA)
+                reapplySlaOnReassignment(updatedWorkOrder, previousPrimaryUserId);
             }
             Long newCostCenterId = updatedWorkOrder.getCostCenter() != null ?
                     updatedWorkOrder.getCostCenter().getId() : null;
