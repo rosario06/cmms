@@ -1,10 +1,18 @@
 package com.grash.controller;
 
 import com.grash.dto.integration.IntegrationShowDTO;
+import com.grash.dto.integration.IntegrationTestResultDTO;
 import com.grash.dto.integration.IotIntegrationPatchDTO;
 import com.grash.dto.integration.IotIntegrationShowDTO;
 import com.grash.dto.integration.IotTelemetryLogShowDTO;
 import com.grash.dto.integration.IotTokenDTO;
+import com.grash.dto.integration.MapsIntegrationPatchDTO;
+import com.grash.dto.integration.MapsIntegrationShowDTO;
+import com.grash.dto.integration.NotificationsIntegrationPatchDTO;
+import com.grash.dto.integration.NotificationsIntegrationShowDTO;
+import com.grash.dto.integration.PaymentsIntegrationPatchDTO;
+import com.grash.dto.integration.PaymentsIntegrationShowDTO;
+import com.grash.dto.integration.WhatsappTestRequestDTO;
 import com.grash.exception.CustomException;
 import com.grash.mapper.IntegrationMapper;
 import com.grash.model.IntegrationConfig;
@@ -12,6 +20,7 @@ import com.grash.model.User;
 import com.grash.model.enums.RoleCode;
 import com.grash.security.CurrentUser;
 import com.grash.service.IntegrationService;
+import com.grash.service.IntegrationTestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +44,7 @@ public class IntegrationController {
 
     private final IntegrationService integrationService;
     private final IntegrationMapper integrationMapper;
+    private final IntegrationTestService integrationTestService;
 
     @Value("${api.host:}")
     private String publicApiUrl;
@@ -45,7 +55,75 @@ public class IntegrationController {
     public ResponseEntity<IntegrationShowDTO> get(@Parameter(hidden = true) @CurrentUser User user) {
         requireAdmin(user);
         IntegrationConfig config = integrationService.getOrCreate(user.getCompany());
-        return ResponseEntity.ok(new IntegrationShowDTO(toIotDto(config)));
+        return ResponseEntity.ok(new IntegrationShowDTO(toIotDto(config),
+                integrationMapper.toMapsShowDto(config),
+                integrationMapper.toPaymentsShowDto(config),
+                integrationMapper.toNotificationsShowDto(config)));
+    }
+
+    @PatchMapping("/maps")
+    @PreAuthorize("hasRole('ROLE_CLIENT')")
+    @Operation(summary = "Update the maps integration settings",
+            description = "apiKey: absent/null = unchanged, non-empty = replace, empty string = delete. Never returned.")
+    public ResponseEntity<MapsIntegrationShowDTO> patchMaps(@Parameter(hidden = true) @CurrentUser User user,
+                                                            @Valid @RequestBody MapsIntegrationPatchDTO patch) {
+        requireAdmin(user);
+        IntegrationConfig config = integrationService.updateMaps(user.getCompany(), patch);
+        return ResponseEntity.ok(integrationMapper.toMapsShowDto(config));
+    }
+
+    @PostMapping("/maps/test")
+    @PreAuthorize("hasRole('ROLE_CLIENT')")
+    @Operation(summary = "Test the maps connection with the stored credentials")
+    public ResponseEntity<IntegrationTestResultDTO> testMaps(@Parameter(hidden = true) @CurrentUser User user) {
+        requireAdmin(user);
+        IntegrationConfig config = integrationService.getOrCreate(user.getCompany());
+        return ResponseEntity.ok(integrationTestService.testMaps(config));
+    }
+
+    @PatchMapping("/payments")
+    @PreAuthorize("hasRole('ROLE_CLIENT')")
+    @Operation(summary = "Update the payments integration settings",
+            description = "secretKey/webhookSecret: absent/null = unchanged, non-empty = replace, empty string = "
+                    + "delete. Never returned.")
+    public ResponseEntity<PaymentsIntegrationShowDTO> patchPayments(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @Valid @RequestBody PaymentsIntegrationPatchDTO patch) {
+        requireAdmin(user);
+        IntegrationConfig config = integrationService.updatePayments(user.getCompany(), patch);
+        return ResponseEntity.ok(integrationMapper.toPaymentsShowDto(config));
+    }
+
+    @PostMapping("/payments/test")
+    @PreAuthorize("hasRole('ROLE_CLIENT')")
+    @Operation(summary = "Test the payments connection with the stored credentials")
+    public ResponseEntity<IntegrationTestResultDTO> testPayments(@Parameter(hidden = true) @CurrentUser User user) {
+        requireAdmin(user);
+        IntegrationConfig config = integrationService.getOrCreate(user.getCompany());
+        return ResponseEntity.ok(integrationTestService.testPayments(config));
+    }
+
+    @PatchMapping("/notifications")
+    @PreAuthorize("hasRole('ROLE_CLIENT')")
+    @Operation(summary = "Update the notifications (WhatsApp) settings",
+            description = "accessToken: absent/null = unchanged, non-empty = replace, empty string = delete. "
+                    + "Never returned.")
+    public ResponseEntity<NotificationsIntegrationShowDTO> patchNotifications(
+            @Parameter(hidden = true) @CurrentUser User user,
+            @Valid @RequestBody NotificationsIntegrationPatchDTO patch) {
+        requireAdmin(user);
+        IntegrationConfig config = integrationService.updateNotifications(user.getCompany(), patch);
+        return ResponseEntity.ok(integrationMapper.toNotificationsShowDto(config));
+    }
+
+    @PostMapping("/notifications/test-whatsapp")
+    @PreAuthorize("hasRole('ROLE_CLIENT')")
+    @Operation(summary = "Send a test WhatsApp message with the stored credentials")
+    public ResponseEntity<IntegrationTestResultDTO> testWhatsapp(@Parameter(hidden = true) @CurrentUser User user,
+                                                                 @Valid @RequestBody WhatsappTestRequestDTO body) {
+        requireAdmin(user);
+        IntegrationConfig config = integrationService.getOrCreate(user.getCompany());
+        return ResponseEntity.ok(integrationTestService.testWhatsapp(config, body.getPhone()));
     }
 
     @PatchMapping("/iot")

@@ -11,6 +11,9 @@ import com.grash.dto.imports.WorkOrderImportDTO;
 import com.grash.dto.license.LicenseEntitlement;
 import com.grash.dto.workOrder.WorkOrderPostDTO;
 import com.grash.dto.workOrder.WorkOrderSendReportDTO;
+import com.grash.event.TechnicianAssignedEvent;
+import com.grash.event.WorkOrderCompletedEvent;
+import com.grash.event.WorkOrderCreatedEvent;
 import com.grash.exception.CustomException;
 import com.grash.factory.StorageServiceFactory;
 import com.grash.mapper.PreventiveMaintenanceMapper;
@@ -39,6 +42,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -110,6 +114,9 @@ public class WorkOrderService {
     private PreventiveMaintenanceService preventiveMaintenanceService;
     private PreventiveMaintenanceMapper preventiveMaintenanceMapper;
     private final FileRepository fileRepository;
+    // field injection on purpose: keeps the constructor of this bean unchanged
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public WorkOrder create(WorkOrder workOrder, Company company) {
@@ -145,7 +152,60 @@ public class WorkOrderService {
         Object serializedWorkOrder = workOrderMapper.toShowDto(savedWorkOrder);
         webhookDispatchService.dispatchWebhook(company, WebhookEvent.NEW_WORK_ORDER, webhookPayload,
                 "newWorkOrder", serializedWorkOrder, null, null, null, null, null);
+        publishCreatedEvents(savedWorkOrder);
         return savedWorkOrder;
+    }
+
+    /**
+     * Publishes the notification events of a new work order (creator notified; technician notified when one is
+     * already assigned). Never throws: the notification must not break the operation.
+     */
+    private void publishCreatedEvents(WorkOrder workOrder) {
+        if (eventPublisher == null) return;
+        try {
+            Long companyId = workOrder.getCompany() == null ? null : workOrder.getCompany().getId();
+            if (companyId == null) return;
+            User creator = findUserForEvent(workOrder.getCreatedBy());
+            eventPublisher.publishEvent(new WorkOrderCreatedEvent(companyId, workOrder.getId(),
+                    workOrder.getTitle(), creator == null ? null : creator.getId(),
+                    creator == null ? null : creator.getPhone()));
+            publishTechnicianAssignedEvent(workOrder);
+        } catch (Exception e) {
+            log.warn("Could not publish work order created event: {}", e.getClass().getSimpleName());
+        }
+    }
+
+    private void publishTechnicianAssignedEvent(WorkOrder workOrder) {
+        if (eventPublisher == null) return;
+        try {
+            User technician = workOrder.getPrimaryUser();
+            Long companyId = workOrder.getCompany() == null ? null : workOrder.getCompany().getId();
+            if (technician == null || companyId == null) return;
+            eventPublisher.publishEvent(new TechnicianAssignedEvent(companyId, workOrder.getId(),
+                    workOrder.getTitle(), technician.getId(), technician.getPhone()));
+        } catch (Exception e) {
+            log.warn("Could not publish technician assigned event: {}", e.getClass().getSimpleName());
+        }
+    }
+
+    private void publishCompletedEvent(WorkOrder workOrder) {
+        if (eventPublisher == null) return;
+        try {
+            Long companyId = workOrder.getCompany() == null ? null : workOrder.getCompany().getId();
+            if (companyId == null) return;
+            User creator = findUserForEvent(workOrder.getCreatedBy());
+            eventPublisher.publishEvent(new WorkOrderCompletedEvent(companyId, workOrder.getId(),
+                    workOrder.getTitle(), creator == null ? null : creator.getId(),
+                    creator == null ? null : creator.getPhone()));
+        } catch (Exception e) {
+            log.warn("Could not publish work order completed event: {}", e.getClass().getSimpleName());
+        }
+    }
+
+    private User findUserForEvent(Long userId) {
+        if (userId == null) return null;
+        Optional<User> user = userService.findById(userId);
+        return user == null ? null : user.orElse(null);
     }
 
     private void setWOCustomFields(WorkOrder workOrder, List<CustomFieldValuePostDTO> customFieldValuePostDTOS,
@@ -208,6 +268,8 @@ public class WorkOrderService {
             Collection<WOField> changedFields = detectPatchDTOChangedFields(savedWorkOrder, workOrder);
             Long previousCategoryId = savedWorkOrder.getCategory() != null ? savedWorkOrder.getCategory().getId() :
                     null;
+            Long previousPrimaryUserId = savedWorkOrder.getPrimaryUser() != null ?
+                    savedWorkOrder.getPrimaryUser().getId() : null;
 
             WorkOrder newWorkOrder = workOrderMapper.updateWorkOrder(savedWorkOrder, workOrder);
             Sanitizer.sanitizeWorkOrder(newWorkOrder);
@@ -237,6 +299,12 @@ public class WorkOrderService {
                 webhookDispatchService.dispatchWebhook(user.getCompany(), WebhookEvent.NEW_CATEGORY_ON_WORK_ORDER,
                         webhookPayload,
                         "changedWorkOrder", serializedWorkOrder, changedFields, null, null, categories, null);
+            }
+
+            Long newPrimaryUserId = updatedWorkOrder.getPrimaryUser() != null ?
+                    updatedWorkOrder.getPrimaryUser().getId() : null;
+            if (newPrimaryUserId != null && !newPrimaryUserId.equals(previousPrimaryUserId)) {
+                publishTechnicianAssignedEvent(updatedWorkOrder);
             }
 
             return updatedWorkOrder;
@@ -896,6 +964,7 @@ public class WorkOrderService {
                         workflowService.findByMainConditionAndCompany(WFMainCondition.WORK_ORDER_CLOSED,
                                 user.getCompany().getId());
                 workflows.forEach(workflow -> workflowService.runWorkOrder(workflow, patchedWorkOrder));
+                publishCompletedEvent(patchedWorkOrder);
 
                 if ("ios".equalsIgnoreCase(platform) || "android".equalsIgnoreCase(platform)) {
                     reviewEligibilityService.incrementWorkOrder(reviewEligibilityService.getOrCreate(user));

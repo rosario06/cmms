@@ -157,7 +157,10 @@ storage:
     value: ${GCP_JSON:}
     json-path: ${GCP_JSON_PATH:}
 
-allowed-organization-admins: ${ALLOWED_ORGANIZATION_ADMINS:}
+integrations:
+  encryption-key: ${INTEGRATIONS_ENCRYPTION_KEY:}
+
+allowed-organization-admins:${ALLOWED_ORGANIZATION_ADMINS:}
 cloud-version: ${CLOUD_VERSION:false}
 enable-sso: ${ENABLE_SSO:false}
 oauth2:

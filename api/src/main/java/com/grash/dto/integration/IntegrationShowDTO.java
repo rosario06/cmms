@@ -9,4 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class IntegrationShowDTO {
     private IotIntegrationShowDTO iot;
+    private MapsIntegrationShowDTO maps;
+    private PaymentsIntegrationShowDTO payments;
+    private NotificationsIntegrationShowDTO notifications;
 }
