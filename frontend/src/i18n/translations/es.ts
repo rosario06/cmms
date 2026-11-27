@@ -231,6 +231,8 @@ const esJSON = {
   required_feedback: 'El campo comentario es requerido',
   signature: 'Firma',
   required_signature: 'La firma es obligatoria',
+  signature_license_required:
+    'Esta orden requiere firma, pero la firma digital necesita una licencia activa. Contacta a tu administrador.',
   close_wo: 'Cerrar Orden de Trabajo',
   close: 'Cerrar',
   task_update_success: 'La tarea ha sido actualizada',

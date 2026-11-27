@@ -220,6 +220,8 @@ const locale = {
   required_feedback: 'Feedback is required',
   signature: 'Signature',
   required_signature: 'Signature is required',
+  signature_license_required:
+    'This work order requires a signature, but digital signatures need an active license. Contact your administrator.',
   close_wo: 'Close Work Order',
   close: 'Close',
   task_update_success: 'Task updated successfully',
