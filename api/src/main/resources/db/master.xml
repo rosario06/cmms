@@ -247,4 +247,6 @@
              relativeToChangelogFile="true"/>
     <include file="changelog/2026_11_26_1795730109_integration_config_maps_payments_notifications.xml"
              relativeToChangelogFile="true"/>
+    <include file="changelog/2026_11_27_1795796449_create_work_order_attendance_log.xml"
+             relativeToChangelogFile="true"/>
 </databaseChangeLog>

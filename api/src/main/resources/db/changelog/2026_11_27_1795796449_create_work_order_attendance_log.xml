@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <changeSet id="1795796449-1" author="Atlas">
+        <comment>Create work_order_attendance_log table (QR check-in / check-out)</comment>
+        <createTable tableName="work_order_attendance_log">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="company_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_order_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="technician_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asset_id" type="BIGINT"/>
+            <column name="check_in_time" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="check_out_time" type="TIMESTAMP"/>
+            <column name="check_in_lat" type="DOUBLE PRECISION"/>
+            <column name="check_in_lng" type="DOUBLE PRECISION"/>
+            <column name="check_out_lat" type="DOUBLE PRECISION"/>
+            <column name="check_out_lng" type="DOUBLE PRECISION"/>
+            <column name="qr_code_scanned" type="VARCHAR(500)"/>
+            <column name="total_minutes" type="BIGINT"/>
+            <column name="notes" type="VARCHAR(1000)"/>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_by" type="BIGINT"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="work_order_attendance_log" baseColumnNames="company_id"
+                                 constraintName="fk_wo_attendance_log_company"
+                                 referencedTableName="company" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="work_order_attendance_log" baseColumnNames="work_order_id"
+                                 constraintName="fk_wo_attendance_log_work_order"
+                                 referencedTableName="work_order" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="work_order_attendance_log" baseColumnNames="technician_id"
+                                 constraintName="fk_wo_attendance_log_technician"
+                                 referencedTableName="own_user" referencedColumnNames="id"
+                                 onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="work_order_attendance_log" baseColumnNames="asset_id"
+                                 constraintName="fk_wo_attendance_log_asset"
+                                 referencedTableName="asset" referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+
+        <createIndex tableName="work_order_attendance_log" indexName="idx_wo_attendance_log_work_order">
+            <column name="work_order_id"/>
+        </createIndex>
+        <createIndex tableName="work_order_attendance_log" indexName="idx_wo_attendance_log_tech_checkout">
+            <column name="technician_id"/>
+            <column name="check_out_time"/>
+        </createIndex>
+
+        <createSequence sequenceName="work_order_attendance_log_seq" startValue="1" incrementBy="50"/>
+    </changeSet>
+</databaseChangeLog>
