@@ -54,19 +54,7 @@ public class LicenseService {
     private volatile long lastCheckedTime = 0;
 
     public synchronized LicensingState getLicensingState() {
-
-        Set<String> allEntitlements = Arrays.stream(LicenseEntitlement.values())
-        .map(Enum::toString)
-        .collect(Collectors.toSet());
-
-        return LicensingState.builder()
-                .hasLicense(true)
-                .valid(true)
-                .entitlements(allEntitlements)
-                .planName("Self-Hosted Full")
-                .usersCount(9999)
-                .build();
-       /*/ if (isCacheValid()) {
+        if (isCacheValid()) {
             return buildLicensingStateFromCache();
         }
 
@@ -80,18 +68,16 @@ public class LicenseService {
         }
 
         // Fall back to Keygen API validation
-        return validateAndCacheLicenseKey();*/
+        return validateAndCacheLicenseKey();
     }
 
     public boolean isSSOEnabled() {
-        //return hasEntitlement(LicenseEntitlement.SSO);
         return hasEntitlement(LicenseEntitlement.SSO);
     }
 
     public boolean hasEntitlement(LicenseEntitlement entitlement) {
-        //LicensingState state = getLicensingState();
-        //return state.isValid() && state.getEntitlements().contains(entitlement.toString());
-        return true;
+        LicensingState state = getLicensingState();
+        return state.isValid() && state.getEntitlements().contains(entitlement.toString());
     }
 
     private boolean isCacheValid() {
