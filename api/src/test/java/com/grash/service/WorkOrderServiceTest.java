@@ -4177,4 +4177,37 @@ class WorkOrderServiceTest {
             assertArrayEquals(Base64.getDecoder().decode(EMPTY_PNG_BASE64), result);
         }
     }
+
+    @Nested
+    class ApplySlaToImported {
+
+        private WorkOrder imported(long id) {
+            WorkOrder workOrder = new WorkOrder();
+            workOrder.setId(id);
+            workOrder.setCompany(company);
+            return workOrder;
+        }
+
+        @Test
+        void appliesTheSlaToEachOne_andAFailureDoesNotStopTheRest() {
+            SlaTrackingService slaTrackingService = mock(SlaTrackingService.class);
+            ReflectionTestUtils.setField(workOrderService, "slaTrackingService", slaTrackingService);
+            WorkOrder first = imported(1L);
+            WorkOrder second = imported(2L);
+            doThrow(new IllegalStateException("boom")).when(slaTrackingService).applySla(first);
+
+            assertDoesNotThrow(() -> workOrderService.applySlaToImported(List.of(first, second)));
+
+            verify(slaTrackingService).applySla(first);
+            verify(slaTrackingService).applySla(second);
+        }
+
+        @Test
+        void withoutSlaServiceOrWorkOrdersItDoesNothing() {
+            ReflectionTestUtils.setField(workOrderService, "slaTrackingService", null);
+
+            assertDoesNotThrow(() -> workOrderService.applySlaToImported(List.of(imported(1L))));
+            assertDoesNotThrow(() -> workOrderService.applySlaToImported(null));
+        }
+    }
 }

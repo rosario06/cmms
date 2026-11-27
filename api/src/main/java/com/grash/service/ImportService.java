@@ -39,6 +39,7 @@ public class ImportService {
         }
 
         List<WorkOrder> workOrdersToSave = new java.util.ArrayList<>();
+        List<WorkOrder> createdWorkOrders = new java.util.ArrayList<>();
         int created = 0;
         int updated = 0;
 
@@ -59,10 +60,13 @@ public class ImportService {
 
             workOrderService.importWorkOrder(workOrder, dto, company);
             workOrdersToSave.add(workOrder);
+            if (workOrder.getId() == null) createdWorkOrders.add(workOrder);
         }
 
         if (!workOrdersToSave.isEmpty()) {
             workOrderService.saveAll(workOrdersToSave);
+            // the created ones get their contract / SLA policy and deadlines, like in WorkOrderService.create
+            workOrderService.applySlaToImported(createdWorkOrders);
         }
 
         return ImportResponse.builder()

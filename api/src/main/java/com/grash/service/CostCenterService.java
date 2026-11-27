@@ -12,6 +12,7 @@ import com.grash.model.User;
 import com.grash.repository.CostCenterRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class CostCenterService {
+    private static final String CODE_EXISTS_MESSAGE = "Cost center with same code already exists";
     private final CostCenterRepository costCenterRepository;
     private final CostCenterMapper costCenterMapper;
     private final WorkOrderFinancialService workOrderFinancialService;
@@ -36,7 +38,7 @@ public class CostCenterService {
         costCenter.setName(costCenter.getName().trim());
         costCenter.setCompany(user.getCompany());
         checkCodeIsFree(user.getCompany().getId(), costCenter.getCode(), null);
-        CostCenter saved = costCenterRepository.saveAndFlush(costCenter);
+        CostCenter saved = saveAndFlushUnique(costCenter);
         em.refresh(saved);
         return saved;
     }
@@ -49,18 +51,27 @@ public class CostCenterService {
         if (updated.getCode() != null) updated.setCode(updated.getCode().trim());
         if (updated.getName() != null) updated.setName(updated.getName().trim());
         checkCodeIsFree(user.getCompany().getId(), updated.getCode(), id);
-        updated = costCenterRepository.saveAndFlush(updated);
+        updated = saveAndFlushUnique(updated);
         // budget / threshold may have changed: re-evaluate the alert
         workOrderFinancialService.recalculateForCostCenter(id);
         em.refresh(updated);
         return updated;
     }
 
+    /** The database also enforces (company_id, code): a concurrent duplicate is reported like the pre-check. */
+    private CostCenter saveAndFlushUnique(CostCenter costCenter) {
+        try {
+            return costCenterRepository.saveAndFlush(costCenter);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(CODE_EXISTS_MESSAGE, HttpStatus.NOT_ACCEPTABLE);
+        }
+    }
+
     private void checkCodeIsFree(Long companyId, String code, Long currentId) {
         boolean exists = costCenterRepository.findByCompany_IdAndCodeIgnoreCase(companyId, code).stream()
                 .anyMatch(other -> !other.getId().equals(currentId));
         if (exists)
-            throw new CustomException("Cost center with same code already exists", HttpStatus.NOT_ACCEPTABLE);
+            throw new CustomException(CODE_EXISTS_MESSAGE, HttpStatus.NOT_ACCEPTABLE);
     }
 
     public void delete(Long id) {

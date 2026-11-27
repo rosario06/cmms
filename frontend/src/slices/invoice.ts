@@ -136,12 +136,20 @@ export const deleteInvoice =
 export const createInvoiceFromWorkOrder =
   (workOrderId: number): AppThunk =>
   async () =>
-    api.post<Invoice>(`${basePath}/from-work-order/${workOrderId}`, {});
+    api.post<Invoice>(
+      `${basePath}/from-work-order/${workOrderId}`,
+      {},
+      { silentConflict: true }
+    );
 
 export const createInvoiceFromContract =
   (contractId: number): AppThunk =>
   async () =>
-    api.post<Invoice>(`${basePath}/from-contract/${contractId}`, {});
+    api.post<Invoice>(
+      `${basePath}/from-contract/${contractId}`,
+      {},
+      { silentConflict: true }
+    );
 
 /** Downloads the printable HTML with the authenticated client. */
 export const getInvoicePrintHtml =

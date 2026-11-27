@@ -2395,6 +2395,11 @@ const esJSON = {
   invoice_generate: 'Generar factura',
   invoice_generate_success: 'La factura ha sido generada',
   invoice_generate_failure: 'No se pudo generar la factura. Es posible que ya exista una para esta orden.',
+  invoice_already_exists_for_work_order: 'Ya existe una factura para esta orden.',
+  invoice_period_already_billed: 'Este período ya fue facturado.',
+  invoice_no_permission: 'No tienes permisos para realizar esta acción.',
+  contract_number_already_exists: 'Ya existe un registro con ese número de contrato.',
+  cost_center_code_already_exists: 'Ya existe un registro con ese código.',
   invoice_confirm: 'Confirmar',
   invoice_view_invoices: 'Ver facturas'
 };

@@ -316,6 +316,37 @@ class WorkOrderControllerTest extends AbstractControllerTest {
         }
 
         @Test
+        void getById_hidesContractCoveredHours_withoutAnalytics() throws Exception {
+            setCurrentUser(clientUser);
+            when(userService.whoami(any())).thenReturn(clientUser);
+            WorkOrder wo = new WorkOrder();
+            wo.setId(1L);
+            showDto.setContractCoveredHours(5.5);
+            when(workOrderService.checkAccessToWorkOrderId(1L, clientUser)).thenReturn(wo);
+            when(workOrderMapper.toShowDto(wo)).thenReturn(showDto);
+
+            mockMvc.perform(get("/work-orders/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.contractCoveredHours").value(0.0));
+        }
+
+        @Test
+        void getById_showsContractCoveredHours_withAnalytics() throws Exception {
+            clientUser.getRole().getViewPermissions().add(PermissionEntity.ANALYTICS);
+            setCurrentUser(clientUser);
+            when(userService.whoami(any())).thenReturn(clientUser);
+            WorkOrder wo = new WorkOrder();
+            wo.setId(1L);
+            showDto.setContractCoveredHours(5.5);
+            when(workOrderService.checkAccessToWorkOrderId(1L, clientUser)).thenReturn(wo);
+            when(workOrderMapper.toShowDto(wo)).thenReturn(showDto);
+
+            mockMvc.perform(get("/work-orders/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.contractCoveredHours").value(5.5));
+        }
+
+        @Test
         void getEvents_requiresRoleClient() throws Exception {
             setCurrentUser(nonClientUser);
             when(userService.whoami(any())).thenReturn(nonClientUser);

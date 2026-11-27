@@ -60,7 +60,8 @@ public class SlaTrackingService {
      * deadlines and status of the work order. Call it on a managed work order once created and whenever its
      * priority or contract changes. The work order is saved.
      */
-    @Transactional
+    // noRollbackFor: callers swallow SLA failures, which must not mark the caller's transaction rollback-only
+    @Transactional(noRollbackFor = RuntimeException.class)
     public void applySla(WorkOrder workOrder) {
         if (workOrder == null || workOrder.getCompany() == null || workOrder.getCompany().getId() == null) return;
         Long companyId = workOrder.getCompany().getId();

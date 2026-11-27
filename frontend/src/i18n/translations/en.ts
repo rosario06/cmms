@@ -2270,6 +2270,11 @@ const locale = {
   invoice_generate: 'Generate invoice',
   invoice_generate_success: 'The invoice has been generated',
   invoice_generate_failure: 'The invoice could not be generated. It may already exist for this work order.',
+  invoice_already_exists_for_work_order: 'An invoice already exists for this work order.',
+  invoice_period_already_billed: 'This period has already been invoiced.',
+  invoice_no_permission: 'You do not have permission to perform this action.',
+  contract_number_already_exists: 'A record with that contract number already exists.',
+  cost_center_code_already_exists: 'A record with that code already exists.',
   invoice_confirm: 'Confirm',
   invoice_view_invoices: 'View invoices'
 };

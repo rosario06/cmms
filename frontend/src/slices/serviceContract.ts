@@ -124,7 +124,8 @@ export const addServiceContract =
   async (dispatch) => {
     const response = await api.post<ServiceContract>(
       basePath,
-      serviceContract
+      serviceContract,
+      { silentConflict: true }
     );
     dispatch(
       slice.actions.addServiceContract({ serviceContract: response })
@@ -136,7 +137,8 @@ export const editServiceContract =
   async (dispatch) => {
     const response = await api.patch<ServiceContract>(
       `${basePath}/${id}`,
-      serviceContract
+      serviceContract,
+      { silentConflict: true }
     );
     dispatch(
       slice.actions.editServiceContract({ serviceContract: response })

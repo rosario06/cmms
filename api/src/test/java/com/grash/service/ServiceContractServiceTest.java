@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -67,7 +69,7 @@ class ServiceContractServiceTest {
         mapped.setName(dto.getName());
         mapped.setIncludedHours(dto.getIncludedHours());
         when(mapper.fromPostDto(dto)).thenReturn(mapped);
-        when(repository.save(any(ServiceContract.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(repository.saveAndFlush(any(ServiceContract.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
@@ -127,7 +129,7 @@ class ServiceContractServiceTest {
         CustomException e = assertThrows(CustomException.class, () -> service.create(dto, company));
 
         assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -149,7 +151,7 @@ class ServiceContractServiceTest {
         saved.setIncludedHours(30);
         saved.setRemainingHours(0);
         when(repository.findByIdAndCompany_Id(5L, 1L)).thenReturn(Optional.of(saved));
-        when(repository.save(saved)).thenReturn(saved);
+        when(repository.saveAndFlush(saved)).thenReturn(saved);
         when(mapper.updateServiceContract(eq(saved), any(ServiceContractPatchDTO.class))).thenAnswer(invocation -> {
             saved.setStatus(ContractStatus.ACTIVE);
             return saved;
@@ -170,7 +172,7 @@ class ServiceContractServiceTest {
                 () -> service.update(5L, new ServiceContractPatchDTO(), company));
 
         assertEquals(HttpStatus.NOT_FOUND, e.getHttpStatus());
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -226,5 +228,69 @@ class ServiceContractServiceTest {
         CustomException e = assertThrows(CustomException.class, () -> service.getUsage(9L));
 
         assertEquals(HttpStatus.NOT_FOUND, e.getHttpStatus());
+    }
+
+    @Test
+    void create_retriesWithANewNumberWhenAConcurrentRequestTookIt() {
+        ServiceContractPostDTO dto = post(null, 10, null);
+        ServiceContract mapped = new ServiceContract();
+        when(mapper.fromPostDto(dto)).thenReturn(mapped);
+        String prefix = "CT-" + year + "-";
+        when(repository.countByCompany_IdAndContractNumberStartingWith(1L, prefix)).thenReturn(0L);
+        // the first candidate looks free, but another transaction takes it before our insert
+        when(repository.existsByCompany_IdAndContractNumber(1L, prefix + "0001")).thenReturn(false, true);
+        when(repository.existsByCompany_IdAndContractNumber(1L, prefix + "0002")).thenReturn(false);
+        when(repository.saveAndFlush(any(ServiceContract.class)))
+                .thenThrow(new DataIntegrityViolationException("uq_service_contract_company_number"))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ServiceContract created = service.create(dto, company);
+
+        assertEquals(prefix + "0002", created.getContractNumber());
+        verify(repository, times(2)).saveAndFlush(any(ServiceContract.class));
+    }
+
+    @Test
+    void create_givesUpWithConflictAfterBoundedAttempts() {
+        ServiceContractPostDTO dto = post(null, 10, null);
+        when(mapper.fromPostDto(dto)).thenReturn(new ServiceContract());
+        when(repository.countByCompany_IdAndContractNumberStartingWith(any(), any())).thenReturn(0L);
+        // generation always believes the candidate is free, the insert always collides
+        // (odd calls: number generation, even calls: check after the failed insert)
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        when(repository.existsByCompany_IdAndContractNumber(any(), any()))
+                .thenAnswer(invocation -> calls.incrementAndGet() % 2 == 0);
+        when(repository.saveAndFlush(any(ServiceContract.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        CustomException e = assertThrows(CustomException.class, () -> service.create(dto, company));
+
+        assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
+        verify(repository, times(5)).saveAndFlush(any(ServiceContract.class));
+    }
+
+    @Test
+    void create_explicitNumberCollidingInTheDatabaseIs409() {
+        ServiceContractPostDTO dto = post("CT-X", 40, null);
+        when(mapper.fromPostDto(dto)).thenReturn(new ServiceContract());
+        when(repository.existsByCompany_IdAndContractNumber(1L, "CT-X")).thenReturn(false, true);
+        when(repository.saveAndFlush(any(ServiceContract.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate"));
+
+        CustomException e = assertThrows(CustomException.class, () -> service.create(dto, company));
+
+        assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
+        verify(repository, times(1)).saveAndFlush(any(ServiceContract.class));
+    }
+
+    @Test
+    void create_otherIntegrityErrorsAreNotSwallowed() {
+        ServiceContractPostDTO dto = post("CT-X", 40, null);
+        when(mapper.fromPostDto(dto)).thenReturn(new ServiceContract());
+        when(repository.existsByCompany_IdAndContractNumber(1L, "CT-X")).thenReturn(false);
+        when(repository.saveAndFlush(any(ServiceContract.class)))
+                .thenThrow(new DataIntegrityViolationException("null value in column"));
+
+        assertThrows(DataIntegrityViolationException.class, () -> service.create(dto, company));
     }
 }

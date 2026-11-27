@@ -15,6 +15,8 @@ import com.grash.model.enums.ContractStatus;
 import com.grash.repository.ServiceContractRepository;
 import com.grash.utils.Sanitizer;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,12 +31,18 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ServiceContractService {
+    private static final int MAX_NUMBER_ATTEMPTS = 5;
+
     private final ServiceContractRepository serviceContractRepository;
     private final ServiceContractMapper serviceContractMapper;
     private final CustomerService customerService;
 
-    @Transactional
+    /**
+     * Not @Transactional on purpose: every save attempt commits on its own, so that a violation of the unique index
+     * (company_id, contract_number) caused by a concurrent request can be retried (bounded) with a new number.
+     */
     public ServiceContract create(ServiceContractPostDTO dto, Company company) {
         validateDates(dto.getStartDate(), dto.getEndDate());
         ServiceContract contract = serviceContractMapper.fromPostDto(dto);
@@ -49,14 +57,28 @@ public class ServiceContractService {
         contract.setRemainingHours(dto.getRemainingHours() == null ? dto.getIncludedHours() :
                 dto.getRemainingHours());
 
-        String number = dto.getContractNumber() == null ? "" : Sanitizer.cleanText(dto.getContractNumber()).trim();
-        if (number.isEmpty()) {
-            number = generateContractNumber(company.getId());
-        } else if (serviceContractRepository.existsByCompany_IdAndContractNumber(company.getId(), number)) {
+        String requested = dto.getContractNumber() == null ? "" : Sanitizer.cleanText(dto.getContractNumber()).trim();
+        boolean explicitNumber = !requested.isEmpty();
+        if (explicitNumber && serviceContractRepository.existsByCompany_IdAndContractNumber(company.getId(),
+                requested)) {
             throw new CustomException("Contract number already exists", HttpStatus.CONFLICT);
         }
-        contract.setContractNumber(number);
-        return serviceContractRepository.save(contract);
+        for (int attempt = 1; attempt <= MAX_NUMBER_ATTEMPTS; attempt++) {
+            String number = explicitNumber ? requested : generateContractNumber(company.getId());
+            contract.setId(null);
+            contract.setContractNumber(number);
+            try {
+                return serviceContractRepository.saveAndFlush(contract);
+            } catch (DataIntegrityViolationException e) {
+                // only a collision of the number is handled here; any other integrity error is propagated
+                if (!serviceContractRepository.existsByCompany_IdAndContractNumber(company.getId(), number)) throw e;
+                if (explicitNumber)
+                    throw new CustomException("Contract number already exists", HttpStatus.CONFLICT);
+                log.warn("Contract number collision for company {} (attempt {}/{})", company.getId(), attempt,
+                        MAX_NUMBER_ATTEMPTS);
+            }
+        }
+        throw new CustomException("Could not allocate a unique contract number, please retry", HttpStatus.CONFLICT);
     }
 
     @Transactional
@@ -86,7 +108,13 @@ public class ServiceContractService {
                 && saved.getIncludedHours() > 0) {
             saved.setRemainingHours(saved.getIncludedHours());
         }
-        return serviceContractRepository.save(saved);
+        try {
+            return serviceContractRepository.saveAndFlush(saved);
+        } catch (DataIntegrityViolationException e) {
+            if (dto.getContractNumber() != null) // the number was changed: most likely a concurrent duplicate
+                throw new CustomException("Contract number already exists", HttpStatus.CONFLICT);
+            throw e;
+        }
     }
 
     @Transactional

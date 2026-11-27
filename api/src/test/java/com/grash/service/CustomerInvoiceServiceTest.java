@@ -305,7 +305,8 @@ class CustomerInvoiceServiceTest {
 
         CustomerInvoice invoice = service.createFromWorkOrder(10L, writer);
 
-        assertEquals(1, invoice.getLines().size());
+        // the billed labor line plus the informative line of the covered hours
+        assertEquals(2, invoice.getLines().size());
         CustomerInvoiceLine labor = firstLine(invoice, InvoiceItemType.LABOR);
         assertEquals(3.0, labor.getQuantity(), 0.0001);
         assertEquals(40.0, labor.getUnitPrice(), 0.0001);
@@ -313,6 +314,12 @@ class CustomerInvoiceServiceTest {
         assertEquals(120.0, invoice.getSubtotal(), 0.0001);
         assertEquals(21.6, invoice.getTaxAmount(), 0.0001);
         assertEquals(141.6, invoice.getTotalAmount(), 0.0001);
+        CustomerInvoiceLine covered = invoice.getLines().get(1);
+        assertEquals(InvoiceItemType.LABOR, covered.getItemType());
+        assertEquals(CustomerInvoiceService.COVERED_HOURS_DESCRIPTION, covered.getDescription());
+        assertEquals(3.0, covered.getQuantity(), 0.0001);
+        assertEquals(0.0, covered.getUnitPrice(), 0.0);
+        assertEquals(0.0, covered.getLineTotal(), 0.0);
         assertEquals(InvoiceStatus.DRAFT, invoice.getStatus());
         assertEquals(wo, invoice.getWorkOrder());
         assertEquals("USD", invoice.getCurrency());
@@ -320,14 +327,21 @@ class CustomerInvoiceServiceTest {
     }
 
     @Test
-    void createFromWorkOrder_noLaborLineWhenEverythingIsCovered() {
+    void createFromWorkOrder_onlyTheInformativeLineWhenEverythingIsCovered() {
         WorkOrder wo = completeWorkOrder(10L);
         wo.setContractCoveredHours(10);
         when(laborService.findByWorkOrder(10L)).thenReturn(List.of(labor(technician(50), 7200, 20)));
 
         CustomerInvoice invoice = service.createFromWorkOrder(10L, writer);
 
-        assertTrue(invoice.getLines().isEmpty());
+        // covered hours are capped to the logged ones (2 h), price 0: the invoice can still be issued
+        assertEquals(1, invoice.getLines().size());
+        CustomerInvoiceLine covered = invoice.getLines().get(0);
+        assertEquals(InvoiceItemType.LABOR, covered.getItemType());
+        assertEquals(CustomerInvoiceService.COVERED_HOURS_DESCRIPTION, covered.getDescription());
+        assertEquals(2.0, covered.getQuantity(), 0.0001);
+        assertEquals(0.0, covered.getUnitPrice(), 0.0);
+        assertEquals(0.0, invoice.getSubtotal(), 0.0);
         assertEquals(0.0, invoice.getTotalAmount(), 0.0);
     }
 
@@ -561,6 +575,19 @@ class CustomerInvoiceServiceTest {
         assertEquals(InvoiceStatus.ISSUED, issued.getStatus());
         long term = issued.getDueDate().getTime() - issued.getIssueDate().getTime();
         assertEquals(30L * 86_400_000L, term, 3_700_000L); // 30 days, tolerant to DST shifts
+    }
+
+    @Test
+    void issue_acceptsAZeroTotalInvoiceThatHasTheInformativeLine() {
+        CustomerInvoice invoice = invoiceWithStatus(InvoiceStatus.DRAFT);
+        CustomerInvoiceService.addLine(invoice, InvoiceItemType.LABOR,
+                CustomerInvoiceService.COVERED_HOURS_DESCRIPTION, 2, 0);
+        CustomerInvoiceService.recalculate(invoice);
+
+        CustomerInvoice issued = service.issue(7L, writer);
+
+        assertEquals(InvoiceStatus.ISSUED, issued.getStatus());
+        assertEquals(0.0, issued.getTotalAmount(), 0.0);
     }
 
     @Test

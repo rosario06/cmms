@@ -13,6 +13,7 @@ import com.grash.model.*;
 import com.grash.model.enums.PermissionEntity;
 import com.grash.model.enums.RoleType;
 import com.grash.service.*;
+import com.grash.utils.FinancialVisibility;
 import com.grash.utils.TenantAspectUtils;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,7 +56,7 @@ public class WorkOrderController {
         User user = userService.whoami(req);
         return ResponseEntity.ok(TenantAspectUtils.executeWithDisabledCompanyCheck(() ->
                 workOrderService.findBySearchCriteriaWithEntityGraph(workOrderService.getSearchCriteria(user,
-                        searchCriteria)).map(workOrderMapper::toShowDto)
+                        searchCriteria)).map(wo -> FinancialVisibility.apply(workOrderMapper.toShowDto(wo), user))
         ));
     }
 
@@ -91,7 +92,7 @@ public class WorkOrderController {
         if (optionalAsset.isPresent()) {
             if (!optionalAsset.get().canBeViewedBy(user))
                 throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
-            return workOrderService.findByAsset(id).stream().map(workOrderMapper::toShowDto).collect(Collectors.toList());
+            return workOrderService.findByAsset(id).stream().map(wo -> FinancialVisibility.apply(workOrderMapper.toShowDto(wo), user)).collect(Collectors.toList());
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
 
@@ -104,7 +105,7 @@ public class WorkOrderController {
         if (optionalLocation.isPresent()) {
             if (!optionalLocation.get().canBeViewedBy(user))
                 throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
-            return workOrderService.findByLocation(id).stream().map(workOrderMapper::toShowDto).collect(Collectors.toList());
+            return workOrderService.findByLocation(id).stream().map(wo -> FinancialVisibility.apply(workOrderMapper.toShowDto(wo), user)).collect(Collectors.toList());
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
 
@@ -112,7 +113,7 @@ public class WorkOrderController {
     @PreAuthorize("permitAll()")
     public WorkOrderShowDTO getById(@PathVariable("id") Long id, HttpServletRequest req) {
         User user = userService.whoami(req);
-        return workOrderMapper.toShowDto(workOrderService.checkAccessToWorkOrderId(id, user));
+        return FinancialVisibility.apply(workOrderMapper.toShowDto(workOrderService.checkAccessToWorkOrderId(id, user)), user);
     }
 
     @PostMapping("")
@@ -121,7 +122,7 @@ public class WorkOrderController {
                                     workOrderReq, HttpServletRequest req) {
         User user = userService.whoami(req);
         WorkOrder createdWorkOrder = workOrderService.createByUser(workOrderReq, user);
-        return workOrderMapper.toShowDto(createdWorkOrder);
+        return FinancialVisibility.apply(workOrderMapper.toShowDto(createdWorkOrder), user);
 
     }
 
@@ -133,7 +134,7 @@ public class WorkOrderController {
         if (optionalPart.isPresent()) {
             if (!optionalPart.get().canBeViewedBy(user))
                 throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
-            return workOrderService.getWorkOrdersByPart(id).stream().map(workOrderMapper::toShowDto).collect(Collectors.toList());
+            return workOrderService.getWorkOrdersByPart(id).stream().map(wo -> FinancialVisibility.apply(workOrderMapper.toShowDto(wo), user)).collect(Collectors.toList());
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
 
@@ -144,7 +145,7 @@ public class WorkOrderController {
                                   HttpServletRequest req) {
         User user = userService.whoami(req);
         WorkOrder patchedWorkOrder = workOrderService.patch(id, workOrder, user);
-        return workOrderMapper.toShowDto(patchedWorkOrder);
+        return FinancialVisibility.apply(workOrderMapper.toShowDto(patchedWorkOrder), user);
     }
 
     @PatchMapping("/{id}/change-status")
@@ -155,7 +156,7 @@ public class WorkOrderController {
                                          @RequestHeader(value = "X-Platform", required = false) String platform) {
         User user = userService.whoami(req);
         WorkOrder patchedWorkOrder = workOrderService.changeStatus(workOrder, id, user, platform);
-        return workOrderMapper.toShowDto(patchedWorkOrder);
+        return FinancialVisibility.apply(workOrderMapper.toShowDto(patchedWorkOrder), user);
     }
 
     @DeleteMapping("/{id}")

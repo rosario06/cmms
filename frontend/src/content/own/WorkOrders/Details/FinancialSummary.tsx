@@ -27,6 +27,7 @@ import { createInvoiceFromWorkOrder } from '../../../../slices/invoice';
 import { CompanySettingsContext } from '../../../../contexts/CompanySettingsContext';
 import { CustomSnackBarContext } from '../../../../contexts/CustomSnackBarContext';
 import { getMarginColor } from '../../CostCenters/utils';
+import { getBillingErrorMessage } from '../../../../utils/billingErrors';
 
 interface FinancialSummaryProps {
   workOrder: WorkOrder;
@@ -55,6 +56,7 @@ export default function FinancialSummary({
   const [failed, setFailed] = useState<boolean>(false);
   const [generating, setGenerating] = useState<boolean>(false);
   const [generated, setGenerated] = useState<boolean>(false);
+  const [alreadyExists, setAlreadyExists] = useState<boolean>(false);
 
   useEffect(() => {
     if (!canView) return undefined;
@@ -81,6 +83,7 @@ export default function FinancialSummary({
 
   useEffect(() => {
     setGenerated(false);
+    setAlreadyExists(false);
   }, [workOrder.id]);
 
   const handleGenerate = async () => {
@@ -90,8 +93,20 @@ export default function FinancialSummary({
       setGenerated(true);
       showSnackBar(t('invoice_generate_success'), 'success');
     } catch (err) {
-      // The API client does not preserve the backend message (409 included).
-      showSnackBar(t('invoice_generate_failure'), 'error');
+      if ((err as any)?.status === 409) {
+        // Single notice: inline alert with a link, no snackbar.
+        setAlreadyExists(true);
+      } else {
+        showSnackBar(
+          getBillingErrorMessage(
+            err,
+            'invoiceFromWorkOrder',
+            t,
+            t('invoice_generate_failure')
+          ),
+          'error'
+        );
+      }
     } finally {
       setGenerating(false);
     }
@@ -200,7 +215,7 @@ export default function FinancialSummary({
         <Box sx={{ mt: 2 }}>
           <Button
             variant="contained"
-            disabled={generating || generated}
+            disabled={generating || generated || alreadyExists}
             startIcon={
               generating ? (
                 <CircularProgress size={16} />
@@ -212,6 +227,14 @@ export default function FinancialSummary({
           >
             {t('invoice_generate')}
           </Button>
+          {alreadyExists && (
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              {`${t('invoice_already_exists_for_work_order')} `}
+              <Link component={RouterLink} to="/app/invoices">
+                {t('invoice_view_invoices')}
+              </Link>
+            </Alert>
+          )}
           {generated && (
             <Alert severity="success" sx={{ mt: 1 }}>
               {`${t('invoice_generate_success')}. `}

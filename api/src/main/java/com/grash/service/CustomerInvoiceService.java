@@ -55,6 +55,7 @@ public class CustomerInvoiceService {
     public static final double DEFAULT_TAX_RATE_PERCENT = 18.0;
     public static final int DEFAULT_DUE_DAYS = 30;
     public static final String DEFAULT_CURRENCY = "USD";
+    public static final String COVERED_HOURS_DESCRIPTION = "Horas cubiertas por contrato";
     private static final int MAX_NUMBER_ATTEMPTS = 5;
     private static final Set<String> SORT_FIELDS = Set.of("id", "invoiceNumber", "issueDate", "dueDate", "status",
             "totalAmount", "createdAt");
@@ -231,11 +232,13 @@ public class CustomerInvoiceService {
 
     private void addLaborLines(CustomerInvoice invoice, WorkOrder workOrder, ServiceContract contract) {
         double coverage = Math.max(0, workOrder.getContractCoveredHours());
+        double coveredTotal = 0;
         for (Labor labor : laborService.findByWorkOrder(workOrder.getId())) {
             if (!labor.isIncludeToTotalTime() || labor.getDuration() <= 0) continue;
             double hours = labor.getDuration() / 3600.0;
             double covered = Math.min(coverage, hours);
             coverage -= covered;
+            coveredTotal += covered;
             double billedHours = hours - covered;
             if (billedHours <= 1e-9) continue;
             String who = labor.getAssignedTo() != null ? labor.getAssignedTo().getFullName() : "";
@@ -243,6 +246,11 @@ public class CustomerInvoiceService {
                     + (covered > 0 ? " (" + round2(covered) + " h covered by contract)" : "");
             addLine(invoice, InvoiceItemType.LABOR, description, round2(billedHours),
                     resolveLaborRate(contract, labor));
+        }
+        // informative line (price 0) so that traceability is kept and a fully covered work order still has a line
+        // (an invoice without lines cannot be issued)
+        if (coveredTotal > 1e-9) {
+            addLine(invoice, InvoiceItemType.LABOR, COVERED_HOURS_DESCRIPTION, round2(coveredTotal), 0);
         }
     }
 

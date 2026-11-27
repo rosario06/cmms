@@ -1,6 +1,15 @@
 import { apiUrl } from '../config';
 
-type Options = RequestInit & { raw?: boolean; headers?: HeadersInit };
+type Options = RequestInit & {
+  raw?: boolean;
+  headers?: HeadersInit;
+  /**
+   * Opt-in: on HTTP 409 do not trigger the global conflict snackbar and throw
+   * an Error carrying the backend body and `status` instead of 'conflict_error'.
+   * The caller is then responsible for showing a single message.
+   */
+  silentConflict?: boolean;
+};
 
 const REFRESH_URL = `${apiUrl}auth/refresh`;
 
@@ -72,7 +81,12 @@ async function doFetch<T>(
   options: Options,
   retried: boolean
 ): Promise<T> {
-  const response = await fetch(url, { headers: authHeader(false), ...options });
+  // options can be undefined (get/deletes without options): keep that safe.
+  const { silentConflict, ...fetchOptions } = options ?? ({} as Options);
+  const response = await fetch(url, {
+    headers: authHeader(false),
+    ...fetchOptions
+  });
   if (!response.ok) {
     if (response.status === 401 && !retried && !isRefreshRequest(url)) {
       const refreshed = await refreshAccessToken();
@@ -80,7 +94,7 @@ async function doFetch<T>(
         return doFetch<T>(url, options, true);
       }
     }
-    if (response.status === 409) {
+    if (response.status === 409 && !silentConflict) {
       if (onConflictError) onConflictError();
       throw new Error('conflict_error');
     }

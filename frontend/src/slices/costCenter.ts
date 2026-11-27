@@ -120,7 +120,9 @@ export const getCostCenterSummary =
 export const addCostCenter =
   (costCenter: Partial<CostCenter>): AppThunk =>
   async (dispatch) => {
-    const response = await api.post<CostCenter>(basePath, costCenter);
+    const response = await api.post<CostCenter>(basePath, costCenter, {
+      silentConflict: true
+    });
     dispatch(slice.actions.addCostCenter({ costCenter: response }));
   };
 
@@ -129,7 +131,8 @@ export const editCostCenter =
   async (dispatch) => {
     const response = await api.patch<CostCenter>(
       `${basePath}/${id}`,
-      costCenter
+      costCenter,
+      { silentConflict: true }
     );
     dispatch(slice.actions.editCostCenter({ costCenter: response }));
   };

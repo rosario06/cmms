@@ -224,6 +224,15 @@ public class WorkOrderService {
     }
 
     /**
+     * Applies the SLA to work orders created by the Excel import (they do not go through {@link #create}). Call it
+     * once they are saved. Same guard as create: a failure is logged and never aborts the import.
+     */
+    public void applySlaToImported(Collection<WorkOrder> workOrders) {
+        if (workOrders == null) return;
+        workOrders.forEach(this::applySla);
+    }
+
+    /**
      * Publishes the notification events of a new work order (creator notified; technician notified when one is
      * already assigned). Never throws: the notification must not break the operation.
      */

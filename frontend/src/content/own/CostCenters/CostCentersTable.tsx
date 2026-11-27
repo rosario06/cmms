@@ -36,6 +36,7 @@ import {
 import { CustomSnackBarContext } from '../../../contexts/CustomSnackBarContext';
 import { CompanySettingsContext } from '../../../contexts/CompanySettingsContext';
 import { getErrorMessage } from '../../../utils/api';
+import { getBillingErrorMessage } from '../../../utils/billingErrors';
 import { formatSelect } from '../../../utils/formatters';
 import { onSearchQueryChange } from '../../../utils/overall';
 import { toNumberOrNull } from '../Contracts/utils';
@@ -342,7 +343,12 @@ const CostCentersTable = ({ openModal, handleCloseModal }: PropsType) => {
                 })
                 .catch((err) =>
                   showSnackBar(
-                    getErrorMessage(err, t('cost_center_create_failure')),
+                    getBillingErrorMessage(
+                      err,
+                      'costCenter',
+                      t,
+                      t('cost_center_create_failure')
+                    ),
                     'error'
                   )
                 )
@@ -410,7 +416,12 @@ const CostCentersTable = ({ openModal, handleCloseModal }: PropsType) => {
                   })
                   .catch((err) =>
                     showSnackBar(
-                      getErrorMessage(err, t('cost_center_edit_failure')),
+                      getBillingErrorMessage(
+                        err,
+                        'costCenter',
+                        t,
+                        t('cost_center_edit_failure')
+                      ),
                       'error'
                     )
                   )
