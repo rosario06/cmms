@@ -128,7 +128,8 @@ class WhatsAppClientTest {
         assertEquals("api.twilio.com", uri[0].getHost());
         assertEquals("/2010-04-01/Accounts/" + SID + "/Messages.json", uri[0].getPath());
         assertTrue(entity.getHeaders().getFirst("Authorization").startsWith("Basic "));
-        MultiValueMap<?, ?> form = (MultiValueMap<?, ?>) entity.getBody();
+        @SuppressWarnings("unchecked")
+        MultiValueMap<String, String> form = (MultiValueMap<String, String>) entity.getBody();
         assertEquals("whatsapp:+14155238886", form.getFirst("From"));
         assertEquals("whatsapp:+18095551234", form.getFirst("To"));
         assertEquals("hola", form.getFirst("Body"));
