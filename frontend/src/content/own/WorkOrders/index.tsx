@@ -184,6 +184,7 @@ function WorkOrders() {
   } = useContext(CompanySettingsContext);
   const hasResourcePlanningEntitlement =
     useLicenseEntitlement('RESOURCE_PLANNING');
+  const hasSignatureEntitlement = useLicenseEntitlement('SIGNATURE_CAPTURE');
   const tabs: {
     value: string;
     label: string;
@@ -802,11 +803,15 @@ function WorkOrders() {
       label: t('files'),
       fileType: 'file'
     },
-    {
-      name: 'requiredSignature',
-      type: 'switch',
-      label: t('requires_signature')
-    },
+    ...(hasSignatureEntitlement
+      ? [
+          {
+            name: 'requiredSignature',
+            type: 'switch',
+            label: t('requires_signature')
+          } as IField
+        ]
+      : []),
     ...getCustomFieldsIFields(customFields, CustomFieldEntityType.WORK_ORDER)
   ];
   const defaultShape: { [key: string]: any } = {

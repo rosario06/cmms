@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogTitle, Typography } from '@mui/material';
+import {
+  Alert,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Typography
+} from '@mui/material';
+import { useLicenseEntitlement } from '../../../../hooks/useLicenseEntitlement';
 import { useTranslation } from 'react-i18next';
 import Form from '../../components/form';
 import * as Yup from 'yup';
@@ -27,6 +34,8 @@ export default function CompleteWOModal({
   const { t }: { t: any } = useTranslation();
   const { uploadFiles } = useContext(CompanySettingsContext);
   const { showSnackBar } = useContext(CustomSnackBarContext);
+  const hasSignatureEntitlement = useLicenseEntitlement('SIGNATURE_CAPTURE');
+  const signatureBlocked = fieldsConfig.signature && !hasSignatureEntitlement;
 
   const getFieldsAndShape = (): [Array<IField>, { [key: string]: any }] => {
     let fields: IField[] = [];
@@ -41,7 +50,7 @@ export default function CompleteWOModal({
       });
       shape = { feedback: Yup.string().required(t('required_feedback')) };
     }
-    if (fieldsConfig.signature) {
+    if (fieldsConfig.signature && hasSignatureEntitlement) {
       fields.push({
         name: 'signature',
         type: 'signature',
@@ -71,6 +80,11 @@ export default function CompleteWOModal({
           p: 3
         }}
       >
+        {signatureBlocked && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {t('signature_license_required')}
+          </Alert>
+        )}
         <Form
           fields={getFieldsAndShape()[0]}
           validation={Yup.object().shape(getFieldsAndShape()[1])}
