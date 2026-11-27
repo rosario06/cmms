@@ -47,7 +47,14 @@ public class CostCenterService {
     public CostCenter update(Long id, CostCenterPatchDTO dto, User user) {
         CostCenter saved = costCenterRepository.findById(id)
                 .orElseThrow(() -> new CustomException("Not found", HttpStatus.NOT_FOUND));
+        // an object without id means "remove the relation" (null only means "unchanged")
+        boolean clearCustomer = dto.getCustomer() != null && dto.getCustomer().getId() == null;
+        boolean clearLocation = dto.getLocation() != null && dto.getLocation().getId() == null;
+        if (clearCustomer) dto.setCustomer(null);
+        if (clearLocation) dto.setLocation(null);
         CostCenter updated = costCenterMapper.updateCostCenter(saved, dto);
+        if (clearCustomer) updated.setCustomer(null);
+        if (clearLocation) updated.setLocation(null);
         if (updated.getCode() != null) updated.setCode(updated.getCode().trim());
         if (updated.getName() != null) updated.setName(updated.getName().trim());
         checkCodeIsFree(user.getCompany().getId(), updated.getCode(), id);
@@ -63,7 +70,7 @@ public class CostCenterService {
         try {
             return costCenterRepository.saveAndFlush(costCenter);
         } catch (DataIntegrityViolationException e) {
-            throw new CustomException(CODE_EXISTS_MESSAGE, HttpStatus.NOT_ACCEPTABLE);
+            throw new CustomException(CODE_EXISTS_MESSAGE, HttpStatus.CONFLICT);
         }
     }
 
@@ -71,7 +78,7 @@ public class CostCenterService {
         boolean exists = costCenterRepository.findByCompany_IdAndCodeIgnoreCase(companyId, code).stream()
                 .anyMatch(other -> !other.getId().equals(currentId));
         if (exists)
-            throw new CustomException(CODE_EXISTS_MESSAGE, HttpStatus.NOT_ACCEPTABLE);
+            throw new CustomException(CODE_EXISTS_MESSAGE, HttpStatus.CONFLICT);
     }
 
     public void delete(Long id) {

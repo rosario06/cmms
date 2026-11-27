@@ -459,10 +459,12 @@ function WorkOrders() {
         }
       : null;
 
-  const formatValues = (values) => {
+  const formatValues = (values, isEdit = false) => {
     const newValues = { ...values };
     if (canSelectCostCenter) {
-      newValues.costCenter = formatSelect(newValues.costCenter);
+      // when editing, an object without id clears the cost center (null is ignored)
+      newValues.costCenter =
+        formatSelect(newValues.costCenter) ?? (isEdit ? {} : null);
     } else {
       delete newValues.costCenter;
     }
@@ -967,7 +969,7 @@ function WorkOrders() {
             }}
             onChange={({ field, e }) => {}}
             onSubmit={async (values) => {
-              let formattedValues = formatValues(values);
+              let formattedValues = formatValues(values, true);
 
               try {
                 const imageAndFiles = await handleFileUpload(

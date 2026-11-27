@@ -273,10 +273,11 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
     partsMarkupPercent: nonNegative(t('contracts_invalid_number'))
   };
 
-  const formatValues = (values) => ({
+  // when editing, an object without id clears the customer (null is ignored)
+  const formatValues = (values, isEdit: boolean) => ({
     contractNumber: values.contractNumber ? values.contractNumber : undefined,
     name: values.name,
-    customer: formatSelect(values.customer),
+    customer: formatSelect(values.customer) ?? (isEdit ? {} : null),
     status: values.status?.value,
     billingCycle: values.billingCycle?.value,
     startDate: toIsoDate(values.startDate),
@@ -527,7 +528,7 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
             values={getFormValues()}
             onChange={() => {}}
             onSubmit={async (values) =>
-              dispatch(addServiceContract(formatValues(values)))
+              dispatch(addServiceContract(formatValues(values, false)))
                 .then(() => {
                   handleCloseModal();
                   showSnackBar(t('contract_create_success'), 'success');
@@ -599,7 +600,7 @@ const ServiceContracts = ({ openModal, handleCloseModal }: PropsType) => {
               onChange={() => {}}
               onSubmit={async (values) =>
                 dispatch(
-                  editServiceContract(currentContract.id, formatValues(values))
+                  editServiceContract(currentContract.id, formatValues(values, true))
                 )
                   .then(() => {
                     setOpenEdit(false);

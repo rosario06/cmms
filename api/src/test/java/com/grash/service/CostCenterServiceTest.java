@@ -68,7 +68,7 @@ class CostCenterServiceTest {
 
         CustomException e = assertThrows(CustomException.class, () -> service.create(dto, user));
 
-        assertEquals(HttpStatus.NOT_ACCEPTABLE, e.getHttpStatus());
+        assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
         verify(repository, never()).saveAndFlush(any());
     }
 
@@ -82,7 +82,7 @@ class CostCenterServiceTest {
 
         CustomException e = assertThrows(CustomException.class, () -> service.create(dto, user));
 
-        assertEquals(HttpStatus.NOT_ACCEPTABLE, e.getHttpStatus());
+        assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
     }
 
     @Test
@@ -110,7 +110,7 @@ class CostCenterServiceTest {
 
         CustomException e = assertThrows(CustomException.class, () -> service.update(5L, dto, user));
 
-        assertEquals(HttpStatus.NOT_ACCEPTABLE, e.getHttpStatus());
+        assertEquals(HttpStatus.CONFLICT, e.getHttpStatus());
         verify(workOrderFinancialService, never()).recalculateForCostCenter(any());
     }
 }

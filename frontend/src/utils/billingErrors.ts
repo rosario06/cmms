@@ -74,6 +74,11 @@ export const getBillingErrorMessage = (
   fallback: string
 ): string => {
   const status = error?.status;
+  // Duplicate cost center codes currently arrive as 406 (NOT_ACCEPTABLE);
+  // the backend may switch to 409, so both are accepted.
+  if (status === 406 && kind === 'costCenter') {
+    return t(CONFLICT_KEYS.costCenter);
+  }
   if (status === 409) {
     const conflictKey = CONFLICT_KEYS[kind];
     if (conflictKey) return t(conflictKey);

@@ -198,11 +198,12 @@ const CostCentersTable = ({ openModal, handleCloseModal }: PropsType) => {
       .nullable()
   };
 
-  const formatValues = (values) => ({
+  // when editing, an object without id clears the relation (null is ignored)
+  const formatValues = (values, isEdit: boolean) => ({
     code: values.code,
     name: values.name,
-    customer: formatSelect(values.customer),
-    location: formatSelect(values.location),
+    customer: formatSelect(values.customer) ?? (isEdit ? {} : null),
+    location: formatSelect(values.location) ?? (isEdit ? {} : null),
     fiscalPeriod: values.fiscalPeriod ? values.fiscalPeriod : null,
     allocatedBudget: toNumberOrNull(values.allocatedBudget) ?? 0,
     alertThresholdPercent: toNumberOrNull(values.alertThresholdPercent) ?? 80,
@@ -336,7 +337,7 @@ const CostCentersTable = ({ openModal, handleCloseModal }: PropsType) => {
             values={getFormValues()}
             onChange={() => {}}
             onSubmit={async (values) =>
-              dispatch(addCostCenter(formatValues(values)))
+              dispatch(addCostCenter(formatValues(values, false)))
                 .then(() => {
                   handleCloseModal();
                   showSnackBar(t('cost_center_create_success'), 'success');
@@ -408,7 +409,7 @@ const CostCentersTable = ({ openModal, handleCloseModal }: PropsType) => {
               onChange={() => {}}
               onSubmit={async (values) =>
                 dispatch(
-                  editCostCenter(currentCostCenter.id, formatValues(values))
+                  editCostCenter(currentCostCenter.id, formatValues(values, true))
                 )
                   .then(() => {
                     setOpenEdit(false);

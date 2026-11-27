@@ -242,7 +242,8 @@ const SlaPolicies = ({ openModal, handleCloseModal }: PropsType) => {
       firstResponseMinutes: toNumberOrNull(values.firstResponseMinutes),
       resolutionMinutes: toNumberOrNull(values.resolutionMinutes),
       penaltyPercent: toNumberOrNull(values.penaltyPercent) ?? 0,
-      serviceContract: formatSelect(values.serviceContract),
+      serviceContract:
+        formatSelect(values.serviceContract) ?? (isEdit ? {} : null),
       useBusinessHours,
       // empty = assignee's schedule or the default one; an object without id
       // clears the relation when editing

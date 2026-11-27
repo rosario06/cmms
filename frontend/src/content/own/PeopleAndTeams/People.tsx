@@ -143,9 +143,16 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
   };
   const debouncedQueryChange = useMemo(() => debounce(onQueryChange, 1300), []);
 
-  // the work schedule can only be changed by who can edit this person
+  // the backend only accepts cost, rate and schedule changes from roles with
+  // editOther PEOPLE_AND_TEAMS (editing your own record is not enough)
+  const hasEditOtherPeople = !!user?.role?.editOtherPermissions?.includes(
+    PermissionEntity.PEOPLE_AND_TEAMS
+  );
+  const canEditFinancials = canSeeFinancials && hasEditOtherPeople;
   const canEditWorkSchedule =
-    !!currentUser && hasEditPermission(PermissionEntity.PEOPLE_AND_TEAMS, currentUser);
+    !!currentUser &&
+    hasEditOtherPeople &&
+    hasEditPermission(PermissionEntity.PEOPLE_AND_TEAMS, currentUser);
 
   useEffect(() => {
     if (openUpdateModal && canEditWorkSchedule) {
@@ -214,7 +221,7 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
       type: 'number',
       label: t('hourly_rate')
     },
-    ...(canSeeFinancials
+    ...(canEditFinancials
       ? [
           {
             name: 'internalHourlyCost',
@@ -333,11 +340,16 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
             }}
             onChange={({ field, e }) => {}}
             onSubmit={async (values) => {
+              // the backend rejects (403) these fields without editOther PEOPLE_AND_TEAMS
+              const baseUser: Partial<UserResponseDTO> = { ...currentUser };
+              delete baseUser.internalHourlyCost;
+              delete baseUser.billableHourlyRate;
+              delete baseUser.workSchedule;
               return dispatch(
                 editUser(currentUser.id, {
-                  ...currentUser,
+                  ...baseUser,
                   rate: values.rate ?? currentUser.rate,
-                  ...(canSeeFinancials
+                  ...(canEditFinancials
                     ? {
                         internalHourlyCost: toNumberOrNull(
                           values.internalHourlyCost

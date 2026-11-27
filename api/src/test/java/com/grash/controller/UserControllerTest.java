@@ -503,6 +503,21 @@ class UserControllerTest extends AbstractControllerTest {
         }
 
         @Test
+        void patch_unchangedBillingValuesOnSelfWithoutEditOtherPermission_isAccepted() throws Exception {
+            setCurrentUser(clientUserWithoutPermission);
+            when(userService.whoami(any())).thenReturn(clientUserWithoutPermission);
+            when(userService.findByIdAndCompany(3L, 1L)).thenReturn(Optional.of(clientUserWithoutPermission));
+            when(userService.update(eq(3L), any(UserPatchDTO.class))).thenReturn(clientUserWithoutPermission);
+            when(userMapper.toResponseDto(clientUserWithoutPermission)).thenReturn(userResponseDto);
+
+            // the client resends the whole profile: values equal to the stored ones must not be refused
+            mockMvc.perform(patch("/users/3")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"internalHourlyCost\":0,\"billableHourlyRate\":0}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
         void getById_returnsUserResponseDTO() throws Exception {
             setCurrentUser(clientUser);
             when(userService.whoami(any())).thenReturn(clientUser);

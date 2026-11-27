@@ -45,7 +45,8 @@ export interface ServiceContract extends Audit {
 export type ServiceContractInput = Partial<
   Omit<ServiceContract, keyof Audit | 'customer'>
 > & {
-  customer?: { id: number; name?: string } | null;
+  // an object without id clears the relation when editing
+  customer?: { id?: number; name?: string } | null;
 };
 
 export interface ServiceContractMini {

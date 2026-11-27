@@ -78,6 +78,27 @@ Think of it like **Jira for technicians**.
 - 📜 Attendance history per work order, with an "On site" indicator while a technician is checked in.
 - ℹ️ Camera scanning requires Chrome/Android over HTTPS.
 
+### Service Contracts & SLA
+
+Available at `/app/contracts` and `/app/work-schedules`.
+
+- 📄 Service contracts and retainers: billing cycle, monthly fee, included hours, retainer balance, hourly rate override and parts markup.
+- 📊 Progress bar of consumed hours / retainer balance per contract. Hours are deducted automatically when a linked work order is completed.
+- ⏲️ SLA policies per priority (first response and resolution time, penalty). Each work order shows a green / yellow / red SLA badge with a countdown.
+- 🕒 Optional business-hours SLA: configurable work schedules with several shifts per day (night shifts included), a holidays table (yearly recurring or one-off) and a schedule assignable to each technician.
+- ℹ️ Changing a schedule or a holiday does not recalculate the SLA of work orders that are already open.
+
+### Costs, Margins & Invoicing
+
+Available at `/app/cost-centers` and `/app/invoices`.
+
+- 💰 Cost centers with a budget, an alert threshold and a budget execution bar. Administrators are notified when the threshold is reached.
+- 🧮 Two rates per technician (internal cost vs billable rate) and two prices per part (cost vs sale price). Cost, billable amount and net margin of each work order are recalculated automatically.
+- 📈 Profitability report by customer and by work order. The financial summary of a work order is only shown to users with the Analytics permission.
+- 🧾 Native invoicing (`INV-2026-0001`): generate an invoice from a completed work order (hours covered by the contract are discounted) or periodically from a contract, issue it, mark it as paid or cancel it.
+- 🖨️ Printable invoice view (save it as PDF from the browser) and KPIs for total invoiced, pending and overdue amounts.
+- 🔒 Contracts, costs and invoices need the Analytics permission to be viewed and the Settings permission to be edited.
+
 ### Integrations Center
 
 Available at `/app/integrations`.

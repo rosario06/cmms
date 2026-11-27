@@ -116,18 +116,20 @@ const InvoicePreview = ({ invoice, open, onClose }: InvoicePreviewProps) => {
               <Grid item xs={12} sm={6}>
                 <Typography variant="subtitle2">{t('invoice_bill_to')}</Typography>
                 <Typography variant="body1">
-                  {invoice.customer?.name ?? '-'}
+                  {invoice.customerBillingName ?? invoice.customer?.name ?? '-'}
                 </Typography>
-                {invoice.workOrder && (
+                {invoice.workOrderId && (
                   <Typography variant="body2">
-                    {`${t('invoice_work_order')}: #${invoice.workOrder.id} ${
-                      invoice.workOrder.title
+                    {`${t('invoice_work_order')}: #${invoice.workOrderId} ${
+                      invoice.workOrderTitle ?? ''
                     }`}
                   </Typography>
                 )}
-                {invoice.serviceContract && (
+                {invoice.serviceContractId && (
                   <Typography variant="body2">
-                    {`${t('invoice_contract')}: ${invoice.serviceContract.name}`}
+                    {`${t('invoice_contract')}: ${
+                      invoice.contractNumber ?? invoice.serviceContractId
+                    }`}
                   </Typography>
                 )}
               </Grid>

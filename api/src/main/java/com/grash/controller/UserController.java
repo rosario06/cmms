@@ -101,12 +101,22 @@ public class UserController {
         if (optionalUser.isPresent()) {
             User savedUser = optionalUser.get();
             if (savedUser.canBeEditedBy(requester)) {
-                if ((userReq.getInternalHourlyCost() != null || userReq.getBillableHourlyRate() != null)
-                        && !requester.getRole().getEditOtherPermissions().contains(PermissionEntity.PEOPLE_AND_TEAMS))
+                boolean canEditBilling = requester.getRole().getEditOtherPermissions()
+                        .contains(PermissionEntity.PEOPLE_AND_TEAMS);
+                // only an actual change is refused: clients resend the whole user object (unchanged values) when a
+                // user saves their own profile
+                boolean costChanged = (userReq.getInternalHourlyCost() != null
+                        && Double.compare(userReq.getInternalHourlyCost(), savedUser.getInternalHourlyCost()) != 0)
+                        || (userReq.getBillableHourlyRate() != null
+                        && Double.compare(userReq.getBillableHourlyRate(), savedUser.getBillableHourlyRate()) != 0);
+                if (costChanged && !canEditBilling)
                     throw new CustomException("You don't have permission to edit hourly cost and billable rate",
                             HttpStatus.FORBIDDEN);
-                if (userReq.getWorkSchedule() != null
-                        && !requester.getRole().getEditOtherPermissions().contains(PermissionEntity.PEOPLE_AND_TEAMS))
+                Long savedScheduleId = savedUser.getWorkSchedule() == null ? null : savedUser.getWorkSchedule().getId();
+                Long requestedScheduleId = userReq.getWorkSchedule() == null ? null : userReq.getWorkSchedule().getId();
+                boolean scheduleChanged = userReq.getWorkSchedule() != null
+                        && !java.util.Objects.equals(savedScheduleId, requestedScheduleId);
+                if (scheduleChanged && !canEditBilling)
                     throw new CustomException("You don't have permission to assign a work schedule",
                             HttpStatus.FORBIDDEN);
                 return userMapper.toResponseDto(userService.update(id, userReq));

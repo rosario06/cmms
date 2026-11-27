@@ -25,6 +25,7 @@ export interface SlaPolicy extends Audit {
 export type SlaPolicyInput = Partial<
   Omit<SlaPolicy, keyof Audit | 'serviceContract' | 'workSchedule'>
 > & {
-  serviceContract?: { id: number; name?: string } | null;
+  // an object without id clears the relation when editing
+  serviceContract?: { id?: number; name?: string } | null;
   workSchedule?: WorkScheduleRef | null;
 };

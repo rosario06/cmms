@@ -34,8 +34,11 @@ export interface Invoice extends Audit {
   id: number;
   invoiceNumber: string;
   customer: { id: number; name: string } | null;
-  workOrder: { id: number; title: string } | null;
-  serviceContract: { id: number; name: string } | null;
+  customerBillingName: string | null;
+  workOrderId: number | null;
+  workOrderTitle: string | null;
+  serviceContractId: number | null;
+  contractNumber: string | null;
   issueDate: string;
   dueDate: string;
   status: InvoiceStatus;
