@@ -82,7 +82,7 @@ public class InvoiceController {
         CustomerInvoice invoice = invoiceService.getById(id, user);
         return ResponseEntity.ok()
                 .contentType(new MediaType("text", "html", StandardCharsets.UTF_8))
-                .header(HttpHeaders.CONTENT_SECURITY_POLICY, "default-src 'none'; style-src 'unsafe-inline'")
+                .header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'")
                 .body(invoiceDocumentService.renderHtml(invoice));
     }
 
