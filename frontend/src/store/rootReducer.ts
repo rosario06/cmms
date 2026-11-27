@@ -46,6 +46,8 @@ import { reducer as customFieldReducer } from 'src/slices/customField';
 import { reducer as workloadReducer } from 'src/slices/workload';
 import { reducer as integrationReducer } from 'src/slices/integration';
 
+import { reducer as plannerReducer } from 'src/slices/planner';
+
 const rootReducer = combineReducers({
   customers: customerReducer,
   vendors: vendorReducer,
@@ -92,7 +94,8 @@ const rootReducer = combineReducers({
   comments: commentReducer,
   customFields: customFieldReducer,
   workload: workloadReducer,
-  integrations: integrationReducer
+  integrations: integrationReducer,
+  planner: plannerReducer
 });
 
 export default rootReducer;

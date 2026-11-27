@@ -267,6 +267,62 @@ public interface WorkOrderRepository extends JpaRepository<WorkOrder, Long>, Jpa
 
     Page<WorkOrder> findByCompany_Id(Long id, Pageable pageable);
 
+    /**
+     * Planner: scheduled work orders. {@code technicianId} uses -1 as "no filter" (avoids untyped null parameters).
+     * {@code restrictToUser} limits to orders the user created / is assigned to (users without viewOther).
+     */
+    @Query("SELECT w FROM WorkOrder w " +
+            "LEFT JOIN FETCH w.primaryUser " +
+            "LEFT JOIN FETCH w.asset " +
+            "LEFT JOIN FETCH w.location " +
+            "WHERE w.company.id = :companyId " +
+            "AND w.status <> com.grash.model.enums.Status.COMPLETE " +
+            "AND ((w.estimatedStartDate IS NOT NULL AND w.estimatedStartDate BETWEEN :start AND :end) " +
+            "     OR (w.estimatedStartDate IS NULL AND w.dueDate BETWEEN :start AND :end)) " +
+            "AND (:technicianId = -1L OR w.primaryUser.id = :technicianId) " +
+            "AND (:restrictToUser = false OR w.createdBy = :userId OR w.primaryUser.id = :userId " +
+            "     OR EXISTS (SELECT a.id FROM w.assignedTo a WHERE a.id = :userId) " +
+            "     OR EXISTS (SELECT tu.id FROM w.team t JOIN t.users tu WHERE tu.id = :userId)) " +
+            "ORDER BY w.estimatedStartDate ASC, w.id ASC")
+    List<WorkOrder> findPlannerScheduled(@Param("companyId") Long companyId,
+                                         @Param("start") Date start,
+                                         @Param("end") Date end,
+                                         @Param("technicianId") Long technicianId,
+                                         @Param("restrictToUser") boolean restrictToUser,
+                                         @Param("userId") Long userId);
+
+    @Query("SELECT w FROM WorkOrder w " +
+            "LEFT JOIN FETCH w.primaryUser " +
+            "LEFT JOIN FETCH w.asset " +
+            "LEFT JOIN FETCH w.location " +
+            "WHERE w.company.id = :companyId " +
+            "AND w.status <> com.grash.model.enums.Status.COMPLETE " +
+            "AND (w.estimatedStartDate IS NULL OR w.primaryUser IS NULL) " +
+            "AND (:restrictToUser = false OR w.createdBy = :userId OR w.primaryUser.id = :userId " +
+            "     OR EXISTS (SELECT a.id FROM w.assignedTo a WHERE a.id = :userId) " +
+            "     OR EXISTS (SELECT tu.id FROM w.team t JOIN t.users tu WHERE tu.id = :userId)) " +
+            "ORDER BY w.createdAt DESC, w.id DESC")
+    List<WorkOrder> findPlannerUnassigned(@Param("companyId") Long companyId,
+                                          @Param("restrictToUser") boolean restrictToUser,
+                                          @Param("userId") Long userId,
+                                          Pageable pageable);
+
+    /**
+     * Planner: candidate work orders of a technician that may overlap a time window.
+     */
+    @Query("SELECT w FROM WorkOrder w " +
+            "WHERE w.company.id = :companyId " +
+            "AND w.primaryUser.id = :technicianId " +
+            "AND w.id <> :excludedId " +
+            "AND w.status <> com.grash.model.enums.Status.COMPLETE " +
+            "AND w.estimatedStartDate IS NOT NULL " +
+            "AND w.estimatedStartDate >= :from AND w.estimatedStartDate < :to")
+    List<WorkOrder> findTechnicianCandidates(@Param("companyId") Long companyId,
+                                             @Param("technicianId") Long technicianId,
+                                             @Param("excludedId") Long excludedId,
+                                             @Param("from") Date from,
+                                             @Param("to") Date to);
+
     @Query("""
                 SELECT DISTINCT w
                 FROM WorkOrder w
