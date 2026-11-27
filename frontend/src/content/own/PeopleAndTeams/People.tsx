@@ -39,6 +39,7 @@ import { PermissionEntity, Role } from '../../../models/owns/role';
 import EditTwoToneIcon from '@mui/icons-material/EditTwoTone';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import useAuth from '../../../hooks/useAuth';
+import { toNumberOrNull } from '../Contracts/utils';
 import Form from '../components/form';
 import * as Yup from 'yup';
 import { IField } from '../type';
@@ -81,7 +82,8 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
   const [shiftModalUser, setShiftModalUser] = useState<UserResponseDTO>();
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const { peopleId } = useParams();
-  const { hasEditPermission, user } = useAuth();
+  const { hasEditPermission, hasViewPermission, user } = useAuth();
+  const canSeeFinancials = hasViewPermission(PermissionEntity.ANALYTICS);
   const [enabledOnly, setEnabledOnly] = useState<boolean>(true);
   const { users, loadingGet, singleUser, lastWeekInvitations } = useSelector(
     (state) => state.users
@@ -200,6 +202,20 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
       type: 'number',
       label: t('hourly_rate')
     },
+    ...(canSeeFinancials
+      ? [
+          {
+            name: 'internalHourlyCost',
+            type: 'number',
+            label: t('financial_internal_hourly_cost')
+          } as IField,
+          {
+            name: 'billableHourlyRate',
+            type: 'number',
+            label: t('financial_billable_hourly_rate')
+          } as IField
+        ]
+      : []),
     {
       name: 'role',
       type: 'select',
@@ -225,6 +241,11 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
     }
     return fields;
   };
+  const nonNegativeNumber = Yup.number()
+    .transform((value, original) => (original === '' ? undefined : value))
+    .typeError(t('financial_invalid_number'))
+    .min(0, t('financial_invalid_number'))
+    .nullable();
   const renderEditUserModal = () => (
     <Dialog
       fullWidth
@@ -254,11 +275,15 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
           <Form
             fields={getFields()}
             validation={Yup.object().shape({
-              password: Yup.string().min(12, t('invalid_password')).nullable()
+              password: Yup.string().min(12, t('invalid_password')).nullable(),
+              internalHourlyCost: nonNegativeNumber,
+              billableHourlyRate: nonNegativeNumber
             })}
             submitText={t('save')}
             values={{
               rate: currentUser?.rate,
+              internalHourlyCost: currentUser?.internalHourlyCost ?? '',
+              billableHourlyRate: currentUser?.billableHourlyRate ?? '',
               role: currentUser
                 ? {
                     label:
@@ -276,6 +301,16 @@ const People = ({ openModal, handleCloseModal, initialEmail }: PropsType) => {
                 editUser(currentUser.id, {
                   ...currentUser,
                   rate: values.rate ?? currentUser.rate,
+                  ...(canSeeFinancials
+                    ? {
+                        internalHourlyCost: toNumberOrNull(
+                          values.internalHourlyCost
+                        ),
+                        billableHourlyRate: toNumberOrNull(
+                          values.billableHourlyRate
+                        )
+                      }
+                    : {}),
                   newPassword: values.password ?? null
                 })
               )

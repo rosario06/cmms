@@ -22,6 +22,9 @@ public class PartPatchDTO {
     @Schema(description = "The cost of the part")
     private double cost;
 
+    @Schema(description = "Sale price charged to the customer (null leaves it unchanged)")
+    private Double billablePrice;
+
     @Schema(description = "The category of the part", implementation = IdDTO.class)
     private PartCategory category;
 

@@ -28,6 +28,8 @@ export interface OwnUser extends Audit {
   username: string;
   email: string;
   rate: number;
+  internalHourlyCost?: number | null;
+  billableHourlyRate?: number | null;
   phone: string;
   ownsCompany: boolean;
   jobTitle: string;

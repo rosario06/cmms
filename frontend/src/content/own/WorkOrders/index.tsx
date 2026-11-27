@@ -78,6 +78,7 @@ import {
 } from '../../../utils/overall';
 import { getSingleLocation } from '../../../slices/location';
 import { getSingleAsset } from '../../../slices/asset';
+import { getCostCenterOptions } from '../../../slices/costCenter';
 import { dayDiff } from '../../../utils/dates';
 import { FilterField, SearchCriteria } from '../../../models/owns/page';
 import {
@@ -161,6 +162,7 @@ function WorkOrders() {
   const { workOrders, loadingGet, singleWorkOrder } = useSelector(
     (state) => state.workOrders
   );
+  const { costCenterOptions } = useSelector((state) => state.costCenters);
   const { exportEntity, loadingExport } = useExport();
   const [searchParams, setSearchParams] = useSearchParams();
   const locationParam = searchParams.get('location');
@@ -440,8 +442,30 @@ function WorkOrders() {
     }
   }, [locationParamObject, assetParamObject]);
 
+  const canSelectCostCenter = hasViewPermission(PermissionEntity.ANALYTICS);
+
+  useEffect(() => {
+    if (canSelectCostCenter)
+      dispatch(getCostCenterOptions()).catch(() => undefined);
+  }, [canSelectCostCenter]);
+
+  const getCostCenterValue = (workOrder?: WorkOrder | null) =>
+    workOrder?.costCenter
+      ? {
+          label: workOrder.costCenter.code
+            ? `${workOrder.costCenter.code} - ${workOrder.costCenter.name}`
+            : workOrder.costCenter.name,
+          value: workOrder.costCenter.id
+        }
+      : null;
+
   const formatValues = (values) => {
     const newValues = { ...values };
+    if (canSelectCostCenter) {
+      newValues.costCenter = formatSelect(newValues.costCenter);
+    } else {
+      delete newValues.costCenter;
+    }
     newValues.assetStatus = newValues.assetStatus?.value ?? null;
     newValues.primaryUser = formatSelect(newValues.primaryUser);
     newValues.location = formatSelect(newValues.location);
@@ -746,6 +770,22 @@ function WorkOrders() {
       label: t('team'),
       placeholder: t('select_team')
     },
+    ...(canSelectCostCenter
+      ? [
+          {
+            name: 'costCenter',
+            type: 'select',
+            label: t('cost_center_label'),
+            placeholder: t('cost_center_select'),
+            items: costCenterOptions.map((costCenter) => ({
+              label: costCenter.code
+                ? `${costCenter.code} - ${costCenter.name}`
+                : costCenter.name,
+              value: costCenter.id
+            }))
+          } as IField
+        ]
+      : []),
     {
       name: 'tasks',
       type: 'select',
@@ -823,6 +863,7 @@ function WorkOrders() {
                       taskBase: { ...task.taskBase, id: null }
                     })),
                     ...getWOBaseValues(t, copyWorkOrderData),
+                    costCenter: getCostCenterValue(copyWorkOrderData),
                     id: null
                   }
                 : {
@@ -921,7 +962,8 @@ function WorkOrders() {
             values={{
               ...currentWorkOrder,
               tasks,
-              ...getWOBaseValues(t, currentWorkOrder)
+              ...getWOBaseValues(t, currentWorkOrder),
+              costCenter: getCostCenterValue(currentWorkOrder)
             }}
             onChange={({ field, e }) => {}}
             onSubmit={async (values) => {

@@ -3,6 +3,8 @@ package com.grash.dto.workOrder;
 import com.grash.dto.IdDTO;
 import com.grash.dto.WorkOrderBasePatchDTO;
 import com.grash.dto.cutomField.CustomFieldValuePostDTO;
+import com.grash.model.CostCenter;
+import com.grash.model.ServiceContract;
 import com.grash.model.User;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -19,5 +21,14 @@ public class WorkOrderPatchDTO extends WorkOrderBasePatchDTO {
 
     @Schema(description = "Whether the work order is archived")
     private boolean archived;
+
+    @Schema(description = "Service contract billed for this work order. Not sent: unchanged. An object without id: " +
+            "detaches the contract", implementation = IdDTO.class)
+    private ServiceContract serviceContract;
+
+    @Schema(description = "Cost center charged for this work order. Not sent: unchanged. An object without id: " +
+            "detaches the cost center", implementation = IdDTO.class)
+    private CostCenter costCenter;
+
     private List<CustomFieldValuePostDTO> customFields = new ArrayList<>();
 }

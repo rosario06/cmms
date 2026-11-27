@@ -2,6 +2,7 @@ package com.grash.dto.workOrder;
 
 import com.grash.dto.*;
 import com.grash.dto.cutomField.CustomFieldValueShowDTO;
+import com.grash.model.enums.SlaStatus;
 import com.grash.model.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -45,5 +46,29 @@ public class WorkOrderShowDTO extends WorkOrderBaseShowDTO {
 
     @Schema(description = "Custom identifier for the work order")
     private String customId;
+
+    @Schema(description = "Service contract this work order is billed under")
+    private ServiceContractMiniDTO serviceContract;
+
+    @Schema(description = "SLA policy applied to this work order")
+    private SlaPolicyMiniDTO slaPolicy;
+
+    @Schema(description = "SLA deadline for the first response")
+    private Date slaFirstResponseDueAt;
+
+    @Schema(description = "SLA deadline for the resolution")
+    private Date slaResolutionDueAt;
+
+    @Schema(description = "When the work order was first responded to (check-in or IN_PROGRESS)")
+    private Date firstRespondedAt;
+
+    @Schema(description = "SLA status: ON_TRACK, AT_RISK, BREACHED or MET. Null when no SLA applies")
+    private SlaStatus slaStatus;
+
+    @Schema(description = "Cost center charged for this work order")
+    private WorkOrderCostCenterDTO costCenter;
+
+    @Schema(description = "Labor hours covered by the service contract")
+    private double contractCoveredHours;
 
 }

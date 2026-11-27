@@ -11,8 +11,16 @@ import org.mapstruct.*;
 
 @Mapper(componentModel = "spring", uses = {PartMapper.class, FileMapper.class, LocationMapper.class
         , TeamMapper.class, UserMapper.class,
-        CustomerMapper.class, AssetMapper.class, CustomFieldValueMapper.class})
+        CustomerMapper.class, AssetMapper.class, CustomFieldValueMapper.class, ServiceContractMapper.class,
+        SlaPolicyMapper.class})
 public interface WorkOrderMapper {
+    // a patch without serviceContract / costCenter must not detach them
+    @Mappings({
+            @Mapping(target = "serviceContract", nullValuePropertyMappingStrategy =
+                    NullValuePropertyMappingStrategy.IGNORE),
+            @Mapping(target = "costCenter", nullValuePropertyMappingStrategy =
+                    NullValuePropertyMappingStrategy.IGNORE)
+    })
     WorkOrder updateWorkOrder(@MappingTarget WorkOrder entity, WorkOrderPatchDTO dto);
 
     @Mappings({})

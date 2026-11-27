@@ -48,6 +48,10 @@ import { reducer as integrationReducer } from 'src/slices/integration';
 
 import { reducer as plannerReducer } from 'src/slices/planner';
 import { reducer as attendanceReducer } from 'src/slices/attendance';
+import { reducer as serviceContractReducer } from 'src/slices/serviceContract';
+import { reducer as slaPolicyReducer } from 'src/slices/slaPolicy';
+import { reducer as costCenterReducer } from 'src/slices/costCenter';
+import { reducer as invoiceReducer } from 'src/slices/invoice';
 
 const rootReducer = combineReducers({
   customers: customerReducer,
@@ -97,7 +101,11 @@ const rootReducer = combineReducers({
   workload: workloadReducer,
   integrations: integrationReducer,
   planner: plannerReducer,
-  attendance: attendanceReducer
+  attendance: attendanceReducer,
+  serviceContracts: serviceContractReducer,
+  slaPolicies: slaPolicyReducer,
+  costCenters: costCenterReducer,
+  invoices: invoiceReducer
 });
 
 export default rootReducer;

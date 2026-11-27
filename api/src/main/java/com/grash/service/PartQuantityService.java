@@ -8,6 +8,7 @@ import com.grash.repository.PartQuantityRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -21,15 +22,28 @@ public class PartQuantityService {
     private final PurchaseOrderService purchaseOrderService;
     private final WorkOrderService workOrderService;
     private final PartQuantityMapper partQuantityMapper;
+    private final WorkOrderFinancialService workOrderFinancialService;
 
+    @Transactional
     public PartQuantity create(PartQuantity PartQuantity) {
-        return partQuantityRepository.save(PartQuantity);
+        PartQuantity saved = partQuantityRepository.save(PartQuantity);
+        recalculateFinancials(saved);
+        return saved;
     }
 
+    private void recalculateFinancials(PartQuantity partQuantity) {
+        if (partQuantity != null && partQuantity.getWorkOrder() != null)
+            workOrderFinancialService.recalculateQuietly(partQuantity.getWorkOrder().getId());
+    }
+
+    @Transactional
     public PartQuantity update(Long id, PartQuantityPatchDTO partQuantity) {
         if (partQuantityRepository.existsById(id)) {
             PartQuantity savedPartQuantity = partQuantityRepository.findById(id).get();
-            return partQuantityRepository.save(partQuantityMapper.updatePartQuantity(savedPartQuantity, partQuantity));
+            PartQuantity updated =
+                    partQuantityRepository.save(partQuantityMapper.updatePartQuantity(savedPartQuantity, partQuantity));
+            recalculateFinancials(updated);
+            return updated;
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
 
@@ -37,8 +51,14 @@ public class PartQuantityService {
         return partQuantityRepository.findAll();
     }
 
+    @Transactional
     public void delete(Long id) {
+        Optional<PartQuantity> optionalPartQuantity = partQuantityRepository.findById(id);
         partQuantityRepository.deleteById(id);
+        optionalPartQuantity.ifPresent(partQuantity -> {
+            partQuantityRepository.flush();
+            recalculateFinancials(partQuantity);
+        });
     }
 
     public Optional<PartQuantity> findById(Long id) {
@@ -62,7 +82,8 @@ public class PartQuantityService {
     }
 
 
+    @Transactional
     public void save(PartQuantity partQuantity) {
-        partQuantityRepository.save(partQuantity);
+        recalculateFinancials(partQuantityRepository.save(partQuantity));
     }
 }

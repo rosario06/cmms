@@ -17,7 +17,7 @@ import lombok.ToString;
 
 @Entity
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"invoice"})
 @ToString(callSuper = true, exclude = {"invoice"})
 public class CustomerInvoiceLine extends CompanyAudit {
     @NotNull

@@ -12,6 +12,8 @@ import com.grash.model.WorkOrderAttendanceLog;
 import com.grash.model.enums.Status;
 import com.grash.repository.WorkOrderAttendanceLogRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,10 @@ public class WorkOrderAttendanceService {
 
     private final WorkOrderAttendanceLogRepository attendanceLogRepository;
     private final WorkOrderService workOrderService;
+    // field injection on purpose (constructor unchanged); null when the service is built by hand in unit tests
+    @Autowired
+    @Lazy
+    private SlaTrackingService slaTrackingService;
 
     @Transactional
     public AttendanceLogShowDTO checkIn(Long workOrderId, AttendanceCheckInDTO dto, User user) {
@@ -72,6 +78,9 @@ public class WorkOrderAttendanceService {
             statusDTO.setStatus(Status.IN_PROGRESS);
             workOrderService.changeStatus(statusDTO, workOrder.getId(), user, null);
         }
+        // SLA first response (only recorded the first time; changeStatus already records it when it moves to
+        // IN_PROGRESS)
+        if (slaTrackingService != null) slaTrackingService.markFirstResponse(workOrder.getId());
 
         WorkOrderAttendanceLog log = new WorkOrderAttendanceLog();
         log.setCompany(user.getCompany());

@@ -21,7 +21,7 @@ import java.util.List;
 
 @Entity
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"lines", "customer", "workOrder", "serviceContract"})
 @ToString(callSuper = true, exclude = {"customer", "workOrder", "serviceContract", "lines"})
 public class CustomerInvoice extends CompanyAudit {
     @NotNull

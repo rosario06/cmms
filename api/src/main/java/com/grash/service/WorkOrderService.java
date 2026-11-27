@@ -117,6 +117,15 @@ public class WorkOrderService {
     // field injection on purpose: keeps the constructor of this bean unchanged
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    // field injection on purpose (constructor unchanged); lazy because the SLA service is a leaf bean. May be null in
+    // unit tests that build this service by hand.
+    @Autowired
+    @Lazy
+    private SlaTrackingService slaTrackingService;
+    // field injection on purpose (constructor unchanged); null when built by hand in unit tests
+    @Autowired
+    @Lazy
+    private WorkOrderFinancialService workOrderFinancialService;
 
     @Transactional
     public WorkOrder create(WorkOrder workOrder, Company company) {
@@ -139,10 +148,24 @@ public class WorkOrderService {
         workOrder.setCompletedOn(null);
         workOrder.setSignature(null);
         workOrder.setArchived(false);
+        // SLA, contract consumption and financial fields are computed by the server, never taken from the request
+        workOrder.setSlaPolicy(null);
+        workOrder.setSlaFirstResponseDueAt(null);
+        workOrder.setSlaResolutionDueAt(null);
+        workOrder.setFirstRespondedAt(null);
+        workOrder.setSlaStatus(null);
+        workOrder.setContractCoveredHours(0);
+        workOrder.setContractHoursApplied(false);
+        workOrder.setTotalInternalCost(0);
+        workOrder.setTotalBillableAmount(0);
+        workOrder.setNetMarginAmount(0);
+        workOrder.setMarginPercentage(0);
+        resolveBillingReferences(workOrder, company);
         Sanitizer.sanitizeWorkOrder(workOrder);
 
         WorkOrder savedWorkOrder = workOrderRepository.saveAndFlush(workOrder);
         em.refresh(savedWorkOrder);
+        applySla(savedWorkOrder);
         notify(savedWorkOrder, Helper.getLocale(company));
         Collection<Workflow> workflows =
                 workflowService.findByMainConditionAndCompany(WFMainCondition.WORK_ORDER_CREATED, company.getId());
@@ -154,6 +177,50 @@ public class WorkOrderService {
                 "newWorkOrder", serializedWorkOrder, null, null, null, null, null);
         publishCreatedEvents(savedWorkOrder);
         return savedWorkOrder;
+    }
+
+    /**
+     * Replaces the service contract / cost center received in a request (only an id) by the managed entities of the
+     * company. An object without id detaches the relation. Fails when the entity does not exist or belongs to
+     * another company.
+     */
+    private void resolveBillingReferences(WorkOrder workOrder, Company company) {
+        ServiceContract contract = workOrder.getServiceContract();
+        if (contract != null) {
+            if (contract.getId() == null) {
+                workOrder.setServiceContract(null);
+            } else {
+                ServiceContract managed = em.find(ServiceContract.class, contract.getId());
+                if (managed == null) throw new CustomException("Service contract not found", HttpStatus.NOT_FOUND);
+                if (managed.getCompany() == null || !managed.getCompany().getId().equals(company.getId()))
+                    throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
+                workOrder.setServiceContract(managed);
+            }
+        }
+        CostCenter costCenter = workOrder.getCostCenter();
+        if (costCenter != null) {
+            if (costCenter.getId() == null) {
+                workOrder.setCostCenter(null);
+            } else {
+                CostCenter managed = em.find(CostCenter.class, costCenter.getId());
+                if (managed == null) throw new CustomException("Cost center not found", HttpStatus.NOT_FOUND);
+                if (managed.getCompany() == null || !managed.getCompany().getId().equals(company.getId()))
+                    throw new CustomException("Access denied", HttpStatus.FORBIDDEN);
+                workOrder.setCostCenter(managed);
+            }
+        }
+    }
+
+    /**
+     * Resolves contract / SLA policy and deadlines. A failure here must not prevent saving the work order.
+     */
+    private void applySla(WorkOrder workOrder) {
+        if (slaTrackingService == null) return;
+        try {
+            slaTrackingService.applySla(workOrder);
+        } catch (RuntimeException e) {
+            log.warn("Could not apply the SLA to work order {}: {}", workOrder.getId(), e.getClass().getSimpleName());
+        }
     }
 
     /**
@@ -270,8 +337,14 @@ public class WorkOrderService {
                     null;
             Long previousPrimaryUserId = savedWorkOrder.getPrimaryUser() != null ?
                     savedWorkOrder.getPrimaryUser().getId() : null;
+            Priority previousPriority = savedWorkOrder.getPriority();
+            Long previousContractId = savedWorkOrder.getServiceContract() != null ?
+                    savedWorkOrder.getServiceContract().getId() : null;
+            Long previousCostCenterId = savedWorkOrder.getCostCenter() != null ?
+                    savedWorkOrder.getCostCenter().getId() : null;
 
             WorkOrder newWorkOrder = workOrderMapper.updateWorkOrder(savedWorkOrder, workOrder);
+            resolveBillingReferences(newWorkOrder, user.getCompany());
             Sanitizer.sanitizeWorkOrder(newWorkOrder);
             if (!workOrder.getCustomFields().isEmpty()) {
                 setWOCustomFields(newWorkOrder, workOrder.getCustomFields(), user.getCompany());
@@ -279,6 +352,18 @@ public class WorkOrderService {
             WorkOrder updatedWorkOrder =
                     workOrderRepository.saveAndFlush(newWorkOrder);
             em.refresh(updatedWorkOrder);
+            Long newContractId = updatedWorkOrder.getServiceContract() != null ?
+                    updatedWorkOrder.getServiceContract().getId() : null;
+            if (!Objects.equals(previousPriority, updatedWorkOrder.getPriority())
+                    || !Objects.equals(previousContractId, newContractId)) {
+                applySla(updatedWorkOrder);
+            }
+            Long newCostCenterId = updatedWorkOrder.getCostCenter() != null ?
+                    updatedWorkOrder.getCostCenter().getId() : null;
+            if (workOrderFinancialService != null && (!Objects.equals(previousContractId, newContractId)
+                    || !Objects.equals(previousCostCenterId, newCostCenterId))) {
+                workOrderFinancialService.recalculateQuietly(updatedWorkOrder.getId());
+            }
             Object serializedWorkOrder = workOrderMapper.toShowDto(updatedWorkOrder);
             Map<String, Object> webhookPayload = new HashMap<>();
             webhookPayload.put("workOrderId", updatedWorkOrder.getId());
@@ -469,6 +554,8 @@ public class WorkOrderService {
                 root.fetch(WorkOrder_.completedBy, JoinType.LEFT);
                 root.fetch(WorkOrder_.parentPreventiveMaintenance, JoinType.LEFT);
                 root.fetch(WorkOrder_.parentRequest, JoinType.LEFT);
+                root.fetch(WorkOrder_.serviceContract, JoinType.LEFT);
+                root.fetch(WorkOrder_.slaPolicy, JoinType.LEFT);
             }
             return baseSpec == null ? null : baseSpec.toPredicate(root, query, criteriaBuilder);
         };
@@ -933,6 +1020,10 @@ public class WorkOrderService {
         }
         if (mutableWO.canBeEditedBy(user) && (dto.getSignature() == null ||
                 user.getCompany().getSubscription().getSubscriptionPlan().getFeatures().contains(PlanFeatures.SIGNATURE))) {
+            if (dto.getStatus().equals(Status.IN_PROGRESS) && slaTrackingService != null) {
+                // first response of the SLA; mutates mutableWO, which is saved below
+                slaTrackingService.markFirstResponse(mutableWO);
+            }
             if (!dto.getStatus().equals(Status.IN_PROGRESS)) {
                 if (dto.getStatus().equals(Status.COMPLETE)) {
                     mutableWO.setCompletedBy(user);

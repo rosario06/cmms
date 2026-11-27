@@ -10,6 +10,8 @@ import { CustomerMiniDTO } from './customer';
 import PreventiveMaintenance from './preventiveMaintenance';
 import { WorkOrderBase } from './workOrderBase';
 import { CustomField } from './customField';
+import { SlaStatus } from './slaPolicy';
+import { CostCenterMini } from './costCenter';
 
 export type Priority = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
 
@@ -27,6 +29,13 @@ export default interface WorkOrder extends WorkOrderBase {
   status: string;
   audioDescription: File;
   customId: string;
+  serviceContract?: { id: number; name: string; contractNumber: string } | null;
+  slaPolicy?: { id: number; name: string } | null;
+  slaFirstResponseDueAt?: string | null;
+  slaResolutionDueAt?: string | null;
+  firstRespondedAt?: string | null;
+  slaStatus?: SlaStatus | null;
+  costCenter?: CostCenterMini | null;
   //parentPreventiveMaintenance:
 }
 

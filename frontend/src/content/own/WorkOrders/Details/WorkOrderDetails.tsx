@@ -103,6 +103,8 @@ import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import QrLabelModal from '../../components/QrLabelModal';
 import ScanAttendanceModal from './ScanAttendanceModal';
 import AttendanceSection from './AttendanceSection';
+import FinancialSummary from './FinancialSummary';
+import SlaBadge from './SlaBadge';
 import { getActiveAttendance } from '../../../../slices/attendance';
 
 const LabelWrapper = styled(Box)(
@@ -592,6 +594,7 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
               <PriorityWrapper priority={workOrder?.priority} withSuffix />
             )}
           </Box>
+          <SlaBadge workOrder={workOrder} />
           <Typography variant="h2">{workOrder?.title}</Typography>
           <Typography variant="h6">{workOrder?.description}</Typography>
         </Box>
@@ -1073,6 +1076,17 @@ export default function WorkOrderDetails(props: WorkOrderDetailsProps) {
                 loading={loadingCosts[workOrder.id]}
               />
             </Box>
+            {hasViewPermission(PermissionEntity.ANALYTICS) && (
+              <Box>
+                <Divider sx={{ mt: 2 }} />
+                <FinancialSummary
+                  workOrder={workOrder}
+                  refreshKey={
+                    labors.length + additionalCosts.length + partQuantities.length
+                  }
+                />
+              </Box>
+            )}
             <Box>
               <Divider sx={{ mt: 2 }} />
               <Typography sx={{ mt: 2, mb: 1 }} variant="h3">

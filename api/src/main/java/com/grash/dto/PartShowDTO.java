@@ -21,6 +21,9 @@ public class PartShowDTO extends AuditShowDTO {
     @Schema(description = "Cost")
     private double cost;
 
+    @Schema(description = "Sale price charged to the customer")
+    private double billablePrice;
+
     @Schema(description = "Category")
     private CategoryMiniDTO category;
 

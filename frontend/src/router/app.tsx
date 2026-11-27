@@ -142,6 +142,9 @@ const CreatePurchaseOrders = Loader(
 const Locations = Loader(lazy(() => import('../content/own/Locations')));
 const WorkOrders = Loader(lazy(() => import('../content/own/WorkOrders')));
 const Planner = Loader(lazy(() => import('../content/own/Planner')));
+const Contracts = Loader(lazy(() => import('../content/own/Contracts')));
+const CostCenters = Loader(lazy(() => import('../content/own/CostCenters')));
+const Invoices = Loader(lazy(() => import('../content/own/Invoices')));
 
 const VendorsAndCustomers = Loader(
   lazy(() => import('../content/own/VendorsAndCustomers'))
@@ -364,6 +367,26 @@ const appRoutes = [
   {
     path: 'planner',
     children: [{ path: '', element: <Planner /> }]
+  },
+  {
+    path: 'contracts',
+    children: [
+      { path: '', element: <Contracts /> },
+      { path: 'service-contracts', element: <Contracts /> },
+      { path: 'sla-policies', element: <Contracts /> }
+    ]
+  },
+  {
+    path: 'cost-centers',
+    children: [
+      { path: '', element: <CostCenters /> },
+      { path: 'budgets', element: <CostCenters /> },
+      { path: 'profitability', element: <CostCenters /> }
+    ]
+  },
+  {
+    path: 'invoices',
+    children: [{ path: '', element: <Invoices /> }]
   },
   {
     path: 'inventory',

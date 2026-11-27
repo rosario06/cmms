@@ -33,6 +33,7 @@ public class LaborService {
     private final LaborMapper laborMapper;
     private final EntityManager em;
     private final LicenseService licenseService;
+    private final WorkOrderFinancialService workOrderFinancialService;
 
     @Transactional
     public Labor create(Labor labor) {
@@ -41,6 +42,7 @@ public class LaborService {
         updateHourlyRateIfNeeded(labor);
         Labor savedLabor = laborRepository.saveAndFlush(labor);
         em.refresh(savedLabor);
+        recalculateFinancials(savedLabor);
         return savedLabor;
     }
 
@@ -61,20 +63,34 @@ public class LaborService {
             updateHourlyRateIfNeeded(labor1);
             Labor updatedLabor = laborRepository.saveAndFlush(labor1);
             em.refresh(updatedLabor);
+            recalculateFinancials(updatedLabor);
             return updatedLabor;
         } else throw new CustomException("Not found", HttpStatus.NOT_FOUND);
     }
 
     public Labor save(Labor labor) {
-        return laborRepository.save(labor);
+        Labor savedLabor = laborRepository.save(labor);
+        recalculateFinancials(savedLabor);
+        return savedLabor;
+    }
+
+    private void recalculateFinancials(Labor labor) {
+        if (labor != null && labor.getWorkOrder() != null)
+            workOrderFinancialService.recalculateQuietly(labor.getWorkOrder().getId());
     }
 
     public Collection<Labor> getAll() {
         return laborRepository.findAll();
     }
 
+    @Transactional
     public void delete(Long id) {
+        Optional<Labor> optionalLabor = laborRepository.findById(id);
         laborRepository.deleteById(id);
+        optionalLabor.ifPresent(labor -> {
+            laborRepository.flush();
+            recalculateFinancials(labor);
+        });
     }
 
     public Optional<Labor> findById(Long id) {
